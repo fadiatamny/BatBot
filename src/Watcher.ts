@@ -1,6 +1,7 @@
-const HourInMS = 3.6e6
 import http from 'http'
 import BotHandler from './BotHandler'
+
+const HourInMS = 3.6e6
 
 export default class Watcher {
     private static _instance: Watcher | null = null
