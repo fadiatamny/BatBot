@@ -18,8 +18,9 @@ export default class BotHandler {
 
     public static specificInstance(prefix?: string) {
         if (this.instance) {
-            this._instance?.removeListeners()
-            this._instance?._bot.destroy()
+            this.instance.removeListeners()
+            this.instance._bot.destroy()
+            this.instance._ip = ''
             this._instance = null
         }
 
