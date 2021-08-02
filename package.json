@@ -4,8 +4,7 @@
   "description": "A discordjs bot that watches ip changes",
   "main": "index.js",
   "scripts": {
-    "start": "node ./build/index.js",
-    "dev": "ts-node ./src/index.ts",
+    "start": "ts-node ./src/index.ts",
     "build": "tsc"
   },
   "keywords": [],
