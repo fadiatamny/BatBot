@@ -23,7 +23,7 @@ export default class BotHandler {
 
     public static specificInstance(prefix?: string) {
         if (this.instance) {
-            this.instance.removeListeners()
+            this.instance._removeListeners()
             this.instance._bot.destroy()
             this.instance._ip = ''
             this._instance = null
@@ -40,28 +40,28 @@ export default class BotHandler {
         this._ip = ''
         this._bot = new Client()
         this._handlers = {
-            [BotEvents.READY]: this.ready.bind(this),
-            [BotEvents.MESSAGE]: this.message.bind(this),
+            [BotEvents.READY]: this._ready.bind(this),
+            [BotEvents.MESSAGE]: this._message.bind(this),
         }
 
-        this.addListeners()
-        this.connect()
+        this._addListeners()
+        this._connect()
     }
 
-    private addListeners() {
+    private _addListeners() {
         Object.entries(this._handlers).forEach(([key, value]) => this._bot.on(key, value))
     }
 
-    private removeListeners() {
+    private _removeListeners() {
         Object.entries(this._handlers).forEach(([key, value]) => this._bot.off(key, value))
     }
 
-    private ready() {
+    private _ready() {
         console.log('The bot is connected !')
         Watcher.instance.start()
     }
 
-    private message(message: Message) {
+    private _message(message: Message) {
         let content = message.content.toLowerCase()
         if (!content.startsWith(this._prefix)) {
             return
@@ -84,7 +84,7 @@ export default class BotHandler {
         }
     }
 
-    private connect() {
+    private _connect() {
         this._bot.login(process.env.BOT_TOKEN)
     }
 

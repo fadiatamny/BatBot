@@ -25,7 +25,7 @@ export default class Watcher {
 
     constructor(private _pollingInterval: number = HourInMS) {}
 
-    private poll() {
+    private _poll() {
         return new Promise<string>((resolve, reject) => {
             const options = {
                 host: 'ipv4bot.whatismyipaddress.com',
@@ -52,8 +52,8 @@ export default class Watcher {
         if (this._job) {
             return
         }
-        this.poll()
-        this._job = setInterval(this.poll, this._pollingInterval)
+        this._poll()
+        this._job = setInterval(this._poll, this._pollingInterval)
     }
 
     public stop() {
