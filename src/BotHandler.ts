@@ -6,6 +6,11 @@ enum BotCommands {
     IP = 'ip'
 }
 
+enum BotEvents {
+    READY = 'ready',
+    MESSAGE = 'message'
+}
+
 export default class BotHandler {
     private static _instance: BotHandler | null
     public static get instance() {
@@ -29,21 +34,26 @@ export default class BotHandler {
 
     private _bot: Client
     private _ip: string
+    private _handlers: {[key: string]: (...args: any[]) => void}
+
     constructor(private _prefix:string = '!') {
         this._ip = ''
         this._bot = new Client()
+        this._handlers = {
+            [BotEvents.READY]: this.ready.bind(this),
+            [BotEvents.MESSAGE]: this.message.bind(this),
+        }
+
         this.addListeners()
         this.connect()
     }
 
     private addListeners() {
-        this._bot.on('ready', this.ready.bind(this))
-        this._bot.on('message', this.message.bind(this))
+        Object.entries(this._handlers).forEach(([key, value]) => this._bot.on(key, value))
     }
 
     private removeListeners() {
-        this._bot.off('ready', this.ready.bind(this))
-        this._bot.off('message', this.message.bind(this))
+        Object.entries(this._handlers).forEach(([key, value]) => this._bot.off(key, value))
     }
 
     private ready() {
