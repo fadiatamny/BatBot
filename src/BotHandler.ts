@@ -18,6 +18,8 @@ export default class BotHandler {
 
     public static specificInstance(prefix?: string) {
         if (this.instance) {
+            this._instance?.removeListeners()
+            this._instance?._bot.destroy()
             this._instance = null
         }
 
@@ -29,9 +31,18 @@ export default class BotHandler {
     constructor(private _prefix:string = '!') {
         this._ip = ''
         this._bot = new Client()
+        this.addListeners()
+        this.connect()
+    }
+
+    private addListeners() {
         this._bot.on('ready', this.ready.bind(this))
         this._bot.on('message', this.message.bind(this))
-        this.connect()
+    }
+
+    private removeListeners() {
+        this._bot.off('ready', this.ready.bind(this))
+        this._bot.off('message', this.message.bind(this))
     }
 
     private ready() {
