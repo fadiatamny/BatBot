@@ -1,13 +1,13 @@
-import { Message } from 'discord.js'
 import Watcher from './Watcher'
-import Discord from 'discord.js'
+import { Client, Message } from 'discord.js'
 
 enum BotCommands {
-    REFRESH = 'refresh'
+    REFRESH = 'refresh',
+    IP = 'ip'
 }
 
 export default class BotHandler {
-    private static _instance: BotHandler
+    private static _instance: BotHandler | null
     public static get instance() {
         if (!this._instance) {
             this._instance = new BotHandler()
@@ -16,11 +16,19 @@ export default class BotHandler {
         return this._instance
     }
 
-    private _bot: Discord.Client
+    public static specificInstance(prefix?: string) {
+        if (this.instance) {
+            this._instance = null
+        }
+
+        this._instance = new BotHandler(prefix)
+    }
+
+    private _bot: Client
     private _ip: string
-    constructor() {
+    constructor(private _prefix:string = '!') {
         this._ip = ''
-        this._bot = new Discord.Client()
+        this._bot = new Client()
         this._bot.on('ready', this.ready.bind(this))
         this._bot.on('message', this.message.bind(this))
         this.connect()
@@ -32,11 +40,24 @@ export default class BotHandler {
     }
 
     private message(message: Message) {
-        console.log('here')
-        const content = message.content.toLowerCase()
+        let content = message.content.toLowerCase()
+        if (!content.startsWith(this._prefix)) {
+            return
+        } else {
+            content = content.slice(1)
+        }
+
         switch (content) {
             case BotCommands.REFRESH:
                 Watcher.instance.refresh()
+                message.reply(`I've refreshed the watcher!`)
+                break
+            case BotCommands.IP:
+                if (this.ip === '') {
+                    message.reply('The ip is not set yet.')
+                } else {
+                    message.reply(`The ip is: ${this.ip}`)
+                }
                 break
         }
     }

@@ -3,4 +3,4 @@ dotenv.config()
 
 import BotHandler from './BotHandler'
 
-BotHandler.instance
+BotHandler.specificInstance(process.env.PREFIX)
