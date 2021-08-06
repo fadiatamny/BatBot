@@ -26,26 +26,33 @@ export default class Watcher {
     constructor(private _pollingInterval: number = HourInMS) {}
 
     private _poll() {
-        return new Promise<string>((resolve, reject) => {
-            const options = {
-                host: 'ipv4bot.whatismyipaddress.com',
-                port: 80,
-                path: '/'
-            }
-
-            http.get(options, function (res) {
-                res.on('data', function (chunk) {
-                    const ip = chunk.toString()
-                    if (BotHandler.instance.ip !== ip) {
-                        BotHandler.instance.setPresenceMessage(ip)
-                    }
-                    resolve(ip)
-                })
-            }).on('error', function (e) {
-                console.log('error: ' + e.message)
-                reject(e.message)
+        try {
+            return new Promise<string>((resolve, reject) => {
+                const options = {
+                    host: 'ipv4bot.whatismyipaddress.com',
+                    port: 80,
+                    path: '/'
+                }
+                try {
+                    http.get(options, function (res) {
+                        res.on('data', function (chunk) {
+                            const ip = chunk.toString()
+                            if (BotHandler.instance.ip !== ip) {
+                                BotHandler.instance.setPresenceMessage(ip)
+                            }
+                            resolve(ip)
+                        })
+                    }).on('error', function (e) {
+                        reject(e.message)
+                    })
+                } catch (e) {
+                    reject(e.message)
+                }
             })
-        })
+        } catch (e) {
+            console.log(e)
+            return ''
+        }
     }
 
     public start() {
