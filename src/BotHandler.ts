@@ -3,12 +3,17 @@ import { Client, Message } from 'discord.js'
 
 enum BotCommands {
     REFRESH = 'refresh',
-    IP = 'ip'
+    IP = 'ip',
+    SET_IP = 'set ip'
 }
 
 enum BotEvents {
     READY = 'ready',
     MESSAGE = 'message'
+}
+
+const enumKeys = <E>(e: E): (keyof E)[] => {
+    return Object.keys(e) as (keyof E)[];
 }
 
 export default class BotHandler {
@@ -35,6 +40,7 @@ export default class BotHandler {
     private _bot: Client
     private _ip: string
     private _handlers: {[key: string]: (...args: any[]) => void}
+    private _commands: {[key: string]: (...args: any[]) => void}
 
     constructor(private _prefix:string = '!') {
         this._ip = ''
@@ -42,6 +48,12 @@ export default class BotHandler {
         this._handlers = {
             [BotEvents.READY]: this._ready.bind(this),
             [BotEvents.MESSAGE]: this._message.bind(this),
+        }
+
+        this._commands = {
+            [BotCommands.IP]: this._ipCommand.bind(this),
+            [BotCommands.REFRESH]: this._refreshCommand.bind(this),
+            [BotCommands.SET_IP]: this._setIPCommand.bind(this)
         }
 
         this._addListeners()
@@ -61,6 +73,28 @@ export default class BotHandler {
         Watcher.instance.start()
     }
 
+    private _refreshCommand(message: Message) {
+        Watcher.instance.refresh()
+        message.reply(`I've refreshed the watcher!`)
+    }
+
+    private _ipCommand(message: Message) {
+        if (this.ip === '') {
+            message.reply('The ip is not set yet.')
+        } else {
+            message.reply(`The ip is: ${this.ip}`)
+        }
+    }
+
+    private _setIPCommand(message: Message) {
+        if (this.ip === '') {
+            message.reply('The ip is not set yet.')
+        } else {
+            this.setPresenceMessage(this.ip)
+            message.reply(`IP set to: ${this.ip}`)
+        }
+    }
+
     private _message(message: Message) {
         let content = message.content.toLowerCase()
         if (!content.startsWith(this._prefix)) {
@@ -69,18 +103,11 @@ export default class BotHandler {
             content = content.slice(1)
         }
 
-        switch (content) {
-            case BotCommands.REFRESH:
-                Watcher.instance.refresh()
-                message.reply(`I've refreshed the watcher!`)
-                break
-            case BotCommands.IP:
-                if (this.ip === '') {
-                    message.reply('The ip is not set yet.')
-                } else {
-                    message.reply(`The ip is: ${this.ip}`)
-                }
-                break
+        for(const command of enumKeys(BotCommands)) {
+            const key = BotCommands[command]
+            if(content.startsWith(`${this._prefix}${key}`)) {
+                this._commands[key](message)
+            }
         }
     }
 

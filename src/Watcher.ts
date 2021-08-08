@@ -37,9 +37,7 @@ export default class Watcher {
                     http.get(options, function (res) {
                         res.on('data', function (chunk) {
                             const ip = chunk.toString()
-                            if (BotHandler.instance.ip !== ip) {
-                                BotHandler.instance.setPresenceMessage(ip)
-                            }
+                            BotHandler.instance.setPresenceMessage(ip)
                             resolve(ip)
                         })
                     }).on('error', function (e) {
