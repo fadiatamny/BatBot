@@ -95,19 +95,22 @@ export default class BotHandler {
         }
     }
 
-    private _message(message: Message) {
+    private _handleCommands (message: Message) {
         let content = message.content.toLowerCase()
-        if (!content.startsWith(this._prefix)) {
-            return
-        } else {
-            content = content.slice(1)
-        }
-
+        content = content.slice(1)
         for(const command of enumKeys(BotCommands)) {
             const key = BotCommands[command]
-            if(content.startsWith(`${this._prefix}${key}`)) {
+            if(content.startsWith(key)) {
                 this._commands[key](message)
             }
+        }
+    }
+
+    private _message(message: Message) {
+        let content = message.content.toLowerCase()
+        if (content.startsWith(this._prefix)) {
+            this._handleCommands(message)
+            return
         }
     }
 
