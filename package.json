@@ -9,7 +9,15 @@
     "build": "tsc"
   },
   "keywords": [],
-  "author": "Fadi A",
+  "author": {
+    "email": "fadiatamny@gmail.com",
+    "name": "Fadi Atamny"
+  },
+  "readmeFilename": "README.md",
+  "bugs": {
+    "url": "https://github.com/fadiatamny/IPWatcher/issues"
+  },
+  "homepage": "https://github.com/fadiatamny/IPWatcher#readme",
   "license": "GPL-3.0 License",
   "repository": {
     "type": "git",
