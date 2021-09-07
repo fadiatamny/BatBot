@@ -1,4 +1,4 @@
-import Watcher from './Watcher'
+import Watcher from '../services/Watcher.service'
 import { Client, Message } from 'discord.js'
 
 enum BotCommands {
@@ -13,7 +13,7 @@ enum BotEvents {
 }
 
 const enumKeys = <E>(e: E): (keyof E)[] => {
-    return Object.keys(e) as (keyof E)[];
+    return Object.keys(e) as (keyof E)[]
 }
 
 export default class BotHandler {
@@ -39,15 +39,15 @@ export default class BotHandler {
 
     private _bot: Client
     private _ip: string
-    private _handlers: {[key: string]: (...args: any[]) => void}
-    private _commands: {[key: string]: (...args: any[]) => void}
+    private _handlers: { [key: string]: (...args: any[]) => void }
+    private _commands: { [key: string]: (...args: any[]) => void }
 
-    constructor(private _prefix:string = '!') {
+    constructor(private _prefix: string = '!') {
         this._ip = ''
         this._bot = new Client()
         this._handlers = {
             [BotEvents.READY]: this._ready.bind(this),
-            [BotEvents.MESSAGE]: this._message.bind(this),
+            [BotEvents.MESSAGE]: this._message.bind(this)
         }
 
         this._commands = {
@@ -95,19 +95,19 @@ export default class BotHandler {
         }
     }
 
-    private _handleCommands (message: Message) {
+    private _handleCommands(message: Message) {
         let content = message.content.toLowerCase()
         content = content.slice(1)
-        for(const command of enumKeys(BotCommands)) {
+        for (const command of enumKeys(BotCommands)) {
             const key = BotCommands[command]
-            if(content.startsWith(key)) {
+            if (content.startsWith(key)) {
                 this._commands[key](message)
             }
         }
     }
 
     private _message(message: Message) {
-        let content = message.content.toLowerCase()
+        const content = message.content.toLowerCase()
         if (content.startsWith(this._prefix)) {
             this._handleCommands(message)
             return

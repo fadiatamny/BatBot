@@ -1,5 +1,5 @@
 import http from 'http'
-import BotHandler from './BotHandler'
+import BotHandler from '../controllers/Bot.controller'
 
 const HourInMS = 3.6e6
 
@@ -43,7 +43,7 @@ export default class Watcher {
                     }).on('error', function (e) {
                         reject(e.message)
                     })
-                } catch (e) {
+                } catch (e: any) {
                     reject(e.message)
                 }
             })
