@@ -141,25 +141,29 @@ export default class RatingService {
 
     public async query(query: RatingQuery) {
         let statement = `SELECT * FROM Rating`
+        let parameters = ``
         const params = []
 
         if (query.category) {
-            statement += `category = ?`
+            parameters += `category = ?`
             params.push(query.category)
         }
         if (query.item) {
-            statement += `item = ?`
+            parameters += `item = ?`
             params.push(query.item)
         }
         if (query.rating) {
-            statement += `rating >= ?`
+            parameters += `rating >= ?`
             params.push(query.rating)
         }
         if (query.date) {
-            statement += `date >= ?`
+            parameters += `date >= ?`
             params.push(query.date)
         }
 
+        if (parameters.length) {
+            statement += 'WHERE ' + parameters
+        }
         statement += `;`
         try {
             const res = (await this._connector.get(statement, params)) as DbRating[]
