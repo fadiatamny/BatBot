@@ -16,12 +16,12 @@ export default class RatingService {
         const statements: string[] = []
 
         statements.push(
-            'CREATE TABLE IF NOT EXISTS `user` (\
+            'CREATE TABLE IF NOT EXISTS `User` (\
             `id` TEXT UNIQUE PRIMARY KEY,\
             `displayName` TEXT NOT NULL)'
         )
         statements.push(
-            'CREATE TABLE IF NOT EXISTS `rating` (\
+            'CREATE TABLE IF NOT EXISTS `Rating` (\
             `id` INTEGER UNIQUE PRIMARY KEY,\
             `category` TEXT NOT NULL,\
             `item` TEXT NOT NULL,\
@@ -66,11 +66,11 @@ export default class RatingService {
         const params = []
 
         if (rating.catergory) {
-            query += `rating = ?`
+            query += `category = ?`
             params.push(rating.catergory)
         }
         if (rating.item) {
-            query += `rating = ?`
+            query += `item = ?`
             params.push(rating.item)
         }
         if (rating.rating) {
