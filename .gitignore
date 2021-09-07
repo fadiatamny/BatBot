@@ -1,4 +1,5 @@
-*.env*
+*.env
+!example.env
 build/
 node_modules/
 *.drawio
