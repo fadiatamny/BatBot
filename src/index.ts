@@ -1,5 +1,6 @@
 import * as dotenv from 'dotenv'
-dotenv.config()
+import path from 'path'
+dotenv.config({ path: path.join(__dirname, `../${process.env.NODE_ENV}.env`) })
 
 import BotHandler from './controllers/Bot.controller'
 
