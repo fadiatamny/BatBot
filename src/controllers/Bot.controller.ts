@@ -1,4 +1,5 @@
 import { Client, Message } from 'discord.js'
+import RatingController from './Rating.controller'
 import WatcherController from './Watcher.controller'
 
 enum BotServices {
@@ -35,6 +36,7 @@ export default class BotController {
     private _handlers: { [key: string]: (...args: any[]) => void }
 
     public watcher: WatcherController
+    public rating: RatingController
 
     constructor(private _prefix: string = '!') {
         this._bot = new Client()
@@ -44,6 +46,7 @@ export default class BotController {
         }
 
         this.watcher = new WatcherController(this._bot)
+        this.rating = new RatingController(this._bot)
 
         this._addListeners()
         this._connect()
