@@ -7,6 +7,6 @@ export interface Rating {
     catergory: RatingCategories
     item: string
     rating: number
+    raterId: string
     date: Date
-    rater: string
 }
