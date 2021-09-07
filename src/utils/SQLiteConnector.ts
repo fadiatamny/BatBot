@@ -1,3 +1,4 @@
+import fs from 'fs'
 import path from 'path'
 import { Database, OPEN_READWRITE, OPEN_CREATE } from 'sqlite3'
 import { BotError } from '../models/BotError.model'
@@ -17,7 +18,13 @@ export default class SQLiteConnector {
 
     constructor(fileName?: string) {
         this._workQueue = new WorkQueue()
+        const dbFolder = path.resolve(__dirname, '../database')
         const dbPath = path.resolve(__dirname, `../database/${fileName ?? 'db.sqlite'}`)
+
+        if (!fs.existsSync(dbFolder)) {
+            fs.mkdirSync(dbFolder)
+        }
+
         this._db = new Database(dbPath, OPEN_READWRITE | OPEN_CREATE, (err) => {
             if (err) {
                 throw new BotError('Error performing connection', err)
