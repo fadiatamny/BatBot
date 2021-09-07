@@ -1,5 +1,5 @@
 import { Client, Message } from 'discord.js'
-import WatcherHandler from './Watcher.controller'
+import WatcherController from './Watcher.controller'
 
 enum BotServices {
     WATCHER = 'watcher',
@@ -11,11 +11,11 @@ enum BotEvents {
     MESSAGE = 'message'
 }
 
-export default class BotHandler {
-    private static _instance: BotHandler | null
+export default class BotController {
+    private static _instance: BotController | null
     public static get instance() {
         if (!this._instance) {
-            this._instance = new BotHandler()
+            this._instance = new BotController()
         }
 
         return this._instance
@@ -28,12 +28,13 @@ export default class BotHandler {
             this._instance = null
         }
 
-        this._instance = new BotHandler(prefix)
+        this._instance = new BotController(prefix)
     }
 
     private _bot: Client
-    private _watcher: WatcherHandler
     private _handlers: { [key: string]: (...args: any[]) => void }
+
+    public watcher: WatcherController
 
     constructor(private _prefix: string = '!') {
         this._bot = new Client()
@@ -41,7 +42,8 @@ export default class BotHandler {
             [BotEvents.READY]: this._ready.bind(this),
             [BotEvents.MESSAGE]: this._message.bind(this)
         }
-        this._watcher = WatcherHandler.generateInstace(this._bot)
+
+        this.watcher = new WatcherController(this._bot)
 
         this._addListeners()
         this._connect()
@@ -57,7 +59,7 @@ export default class BotHandler {
 
     private _ready() {
         console.log('The bot is connected !')
-        this._watcher.start()
+        this.watcher.start()
     }
 
     private _cleanContentPrefix(content: string, opt?: { prefix?: BotServices; count?: number }) {
@@ -73,7 +75,7 @@ export default class BotHandler {
         content = content.slice(1)
         if (content.startsWith(BotServices.WATCHER)) {
             content = this._cleanContentPrefix(content, { prefix: BotServices.WATCHER })
-            this._watcher.handleCommands(content, message)
+            this.watcher.handleCommands(content, message)
         } else if (content.startsWith(BotServices.RATING)) {
             content = this._cleanContentPrefix(content, { prefix: BotServices.RATING })
         }

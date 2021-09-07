@@ -8,20 +8,7 @@ enum WatcherCommands {
     SET_IP = 'set ip'
 }
 
-export default class WatcherHandler {
-    private static _instance: WatcherHandler | null
-    public static get instance() {
-        return this._instance
-    }
-    public static generateInstace(bot: Client) {
-        if (this._instance) {
-            this._instance.dispose()
-        }
-        this._instance = null
-        this._instance = new WatcherHandler(bot)
-        return this._instance
-    }
-
+export default class WatcherController {
     private _ip: string
     private _commands: { [key: string]: (...args: any[]) => void }
     private _service: WatcherService

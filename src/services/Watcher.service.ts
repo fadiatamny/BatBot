@@ -1,15 +1,21 @@
 import http from 'http'
-import WatcherHandler from '../controllers/Watcher.controller'
+import BotController from '../controllers/Bot.controller'
+import { Logger } from '../utils/Logger'
 
 const HourInMS = 3.6e6
 
 export default class WatcherService {
-    private _job?: NodeJS.Timer
-    constructor(private _pollingInterval: number = HourInMS) {}
+    private _job: NodeJS.Timer | undefined
+    private _logger: Logger
+
+    constructor(private _pollingInterval: number = HourInMS) {
+        this._logger = new Logger('RatingService')
+    }
 
     private _poll() {
         try {
             return new Promise<string>((resolve, reject) => {
+                this._logger.log('started Polling')
                 const options = {
                     host: 'ipv4bot.whatismyipaddress.com',
                     port: 80,
@@ -19,7 +25,7 @@ export default class WatcherService {
                     http.get(options, function (res) {
                         res.on('data', function (chunk) {
                             const ip = chunk.toString()
-                            WatcherHandler.instance?.setPresenceMessage(ip)
+                            BotController.instance?.watcher.setPresenceMessage(ip)
                             resolve(ip)
                         })
                     }).on('error', function (e) {
@@ -27,10 +33,12 @@ export default class WatcherService {
                     })
                 } catch (e: any) {
                     reject(e.message)
+                } finally {
+                    this._logger.log('finished Polling')
                 }
             })
         } catch (e) {
-            console.log(e)
+            this._logger.error(e)
             return ''
         }
     }
