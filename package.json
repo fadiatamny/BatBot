@@ -15,13 +15,13 @@
   },
   "readmeFilename": "README.md",
   "bugs": {
-    "url": "https://github.com/fadiatamny/IPWatcher/issues"
+    "url": "https://github.com/fadiatamny/BatBot/issues"
   },
-  "homepage": "https://github.com/fadiatamny/IPWatcher#readme",
+  "homepage": "https://github.com/fadiatamny/BatBot#readme",
   "license": "GPL-3.0 License",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fadiatamny/IPWatcher.git"
+    "url": "https://github.com/fadiatamny/BatBot.git"
   },
   "dependencies": {
     "discord.js": "^12.5.3",
