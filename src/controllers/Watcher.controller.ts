@@ -1,4 +1,4 @@
-import Watcher from '../services/Watcher.service'
+import WatcherService from '../services/Watcher.service'
 import { Client, Message } from 'discord.js'
 import { enumKeys } from '../utils'
 
@@ -24,6 +24,7 @@ export default class WatcherHandler {
 
     private _ip: string
     private _commands: { [key: string]: (...args: any[]) => void }
+    private _service: WatcherService
 
     public get ip() {
         return this._ip
@@ -36,10 +37,11 @@ export default class WatcherHandler {
             [WatcherCommands.REFRESH]: this._refreshCommand.bind(this),
             [WatcherCommands.SET_IP]: this._setIPCommand.bind(this)
         }
+        this._service = new WatcherService()
     }
 
     private _refreshCommand(message: Message) {
-        Watcher.instance.refresh()
+        this._service.refresh()
         message.reply(`I've refreshed the watcher!`)
     }
 
@@ -83,5 +85,9 @@ export default class WatcherHandler {
 
     public dispose() {
         this._ip = ''
+    }
+
+    public start() {
+        this._service.start()
     }
 }

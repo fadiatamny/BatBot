@@ -3,26 +3,8 @@ import WatcherHandler from '../controllers/Watcher.controller'
 
 const HourInMS = 3.6e6
 
-export default class Watcher {
-    private static _instance: Watcher | null = null
-    public static get instance() {
-        if (!this._instance) {
-            this._instance = new Watcher()
-        }
-
-        return this._instance
-    }
-
-    public static specificInstance(time: number) {
-        if (this.instance) {
-            this._instance = null
-        }
-
-        this._instance = new Watcher(time)
-    }
-
+export default class WatcherService {
     private _job?: NodeJS.Timer
-
     constructor(private _pollingInterval: number = HourInMS) {}
 
     private _poll() {

@@ -1,4 +1,3 @@
-import Watcher from '../services/Watcher.service'
 import { Client, Message } from 'discord.js'
 import WatcherHandler from './Watcher.controller'
 
@@ -58,7 +57,7 @@ export default class BotHandler {
 
     private _ready() {
         console.log('The bot is connected !')
-        Watcher.instance.start()
+        this._watcher.start()
     }
 
     private _cleanContentPrefix(content: string, opt?: { prefix?: BotServices; count?: number }) {
