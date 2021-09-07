@@ -1,5 +1,5 @@
 import { BotError } from '../models/BotError.model'
-import { DbRating, Rating } from '../models/rating.model'
+import { DbRating, Rating, RatingQuery } from '../models/rating.model'
 import { User } from '../models/user.model'
 import { Logger } from '../utils/Logger'
 import SQLiteConnector from '../utils/SQLiteConnector'
@@ -105,10 +105,11 @@ export default class RatingService {
             params.push(rating.rating)
         }
 
+        query += `date = CURRENT_TIMESTAMP`
         query += `WHERE id = '${ratingId}';`
 
         try {
-            await this._connector.query(query)
+            await this._connector.query(query, params)
             this._logger.log('Successfully updated Rating ', ratingId)
         } catch (e: any) {
             this._logger.error(e.message, e.error)
@@ -138,8 +139,34 @@ export default class RatingService {
         }
     }
 
-    public async query() {
-        // lodash implementation of query over all objects of list.
-        throw new BotError('Not Implemented', null)
+    public async query(query: RatingQuery) {
+        let statement = `SELECT * FROM Rating`
+        const params = []
+
+        if (query.category) {
+            statement += `category = ?`
+            params.push(query.category)
+        }
+        if (query.item) {
+            statement += `item = ?`
+            params.push(query.item)
+        }
+        if (query.rating) {
+            statement += `rating >= ?`
+            params.push(query.rating)
+        }
+        if (query.date) {
+            statement += `date >= ?`
+            params.push(query.date)
+        }
+
+        statement += `;`
+        try {
+            const res = (await this._connector.get(statement, params)) as DbRating[]
+            return res ?? []
+        } catch (e: any) {
+            this._logger.error(e.message, e.error)
+            throw e
+        }
     }
 }

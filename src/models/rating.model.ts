@@ -14,3 +14,11 @@ export interface DbRating extends Rating {
     id: number
     date: Date
 }
+
+export interface RatingQuery {
+    date?: Date
+    category?: RatingCategories
+    item?: string
+    rating?: number
+    raterId?: string
+}

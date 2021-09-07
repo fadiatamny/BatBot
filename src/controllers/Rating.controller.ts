@@ -1,7 +1,7 @@
 import RatingService from '../services/Rating.service'
 import { Client, Message, MessageEmbed } from 'discord.js'
 import { enumKeys, removePrefix } from '../utils'
-import { Rating, RatingCategories } from '../models/rating.model'
+import { DbRating, Rating, RatingCategories, RatingQuery } from '../models/rating.model'
 import { BotError } from '../models/BotError.model'
 import { Logger } from '../utils/Logger'
 
@@ -52,33 +52,77 @@ export default class RatingController {
         }
     }
 
+    private _buildQueryFromParameters(parameters: string[]) {
+        const ratingCategories = Object.values(RatingCategories) as string[]
+        const query: RatingQuery = {}
+
+        for (let i = 0; i < parameters.length; i += 2) {
+            const item = parameters[i]
+            const value = parameters[i + 1]
+
+            switch (item) {
+                case 'rating':
+                    query.rating = Number(value)
+                    break
+                case 'item':
+                    query.item = value
+                    break
+                case 'category':
+                    if (ratingCategories.includes(value)) {
+                        query.category = value as RatingCategories
+                    } else {
+                        this._logger.warn('Categorie mismatch did not add it to query')
+                    }
+                    break
+                case 'date':
+                    query.date = new Date(value)
+                    break
+                case 'rater':
+                    query.raterId = value
+                    break
+            }
+        }
+
+        return query
+    }
+
+    private async _ratingsToEmbeddedTable(ratings: DbRating[]) {
+        const embedded = new MessageEmbed()
+        embedded.title = 'Ratings'
+        embedded.addField(
+            '#\t\tCategory\t\t\tItem\t\t\tRating\t\tRater\t\tDate',
+            '------------------------------------------------------------------------------',
+            false
+        )
+        for (const rating of ratings) {
+            const rater = await this._service.getUserDisplayName(rating.raterId)
+            if (!rater) {
+                throw new BotError('Error occured trying to fetch rater name')
+            }
+            embedded.addField(
+                `#${rating.id}\t\t${rating.category}\t\t\t${rating.item}\t\t\t${rating.rating}\t\t${rater.displayName}\t\t${rating.date}`,
+                '---',
+                false
+            )
+        }
+
+        return embedded
+    }
+
     private async _listCommand(content: string, message: Message) {
         try {
             const parameters = content.split(' ')
+            let ratings: DbRating[] = []
+
             if (parameters.length && parameters[0] !== '') {
-                // query
+                const query = this._buildQueryFromParameters(parameters)
+                ratings = await this._service.query(query)
             } else {
-                const ratings = await this._service.list()
-                const embedded = new MessageEmbed()
-                embedded.title = 'Ratings'
-                embedded.addField(
-                    '#\t\tCategory\t\t\tItem\t\t\tRating\t\tRater\t\tDate',
-                    '------------------------------------------------------------------------------',
-                    false
-                )
-                for (const rating of ratings) {
-                    const rater = await this._service.getUserDisplayName(rating.raterId)
-                    if (!rater) {
-                        throw new BotError('Error occured trying to fetch rater name')
-                    }
-                    embedded.addField(
-                        `#${rating.id}\t\t${rating.category}\t\t\t${rating.item}\t\t\t${rating.rating}\t\t${rater.displayName}\t\t${rating.date}`,
-                        '---',
-                        false
-                    )
-                }
-                message.channel.send(embedded)
+                ratings = await this._service.list()
             }
+
+            const embedded = await this._ratingsToEmbeddedTable(ratings)
+            message.channel.send(embedded)
         } catch (e: any) {
             message.reply(`There was an error listing the rating`)
             this._logger.error(e)
