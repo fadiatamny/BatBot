@@ -1,19 +1,15 @@
 import Watcher from '../services/Watcher.service'
 import { Client, Message } from 'discord.js'
+import WatcherHandler from './Watcher.controller'
 
-enum BotCommands {
-    REFRESH = 'refresh',
-    IP = 'ip',
-    SET_IP = 'set ip'
+enum BotServices {
+    WATCHER = 'watcher',
+    RATING = 'rating'
 }
 
 enum BotEvents {
     READY = 'ready',
     MESSAGE = 'message'
-}
-
-const enumKeys = <E>(e: E): (keyof E)[] => {
-    return Object.keys(e) as (keyof E)[]
 }
 
 export default class BotHandler {
@@ -30,7 +26,6 @@ export default class BotHandler {
         if (this.instance) {
             this.instance._removeListeners()
             this.instance._bot.destroy()
-            this.instance._ip = ''
             this._instance = null
         }
 
@@ -38,26 +33,19 @@ export default class BotHandler {
     }
 
     private _bot: Client
-    private _ip: string
+    private _watcher: WatcherHandler
     private _handlers: { [key: string]: (...args: any[]) => void }
-    private _commands: { [key: string]: (...args: any[]) => void }
 
     constructor(private _prefix: string = '!') {
-        this._ip = ''
         this._bot = new Client()
         this._handlers = {
             [BotEvents.READY]: this._ready.bind(this),
             [BotEvents.MESSAGE]: this._message.bind(this)
         }
-
-        this._commands = {
-            [BotCommands.IP]: this._ipCommand.bind(this),
-            [BotCommands.REFRESH]: this._refreshCommand.bind(this),
-            [BotCommands.SET_IP]: this._setIPCommand.bind(this)
-        }
-
         this._addListeners()
         this._connect()
+
+        this._watcher = WatcherHandler.generateInstace(this._bot)
     }
 
     private _addListeners() {
@@ -73,36 +61,22 @@ export default class BotHandler {
         Watcher.instance.start()
     }
 
-    private _refreshCommand(message: Message) {
-        Watcher.instance.refresh()
-        message.reply(`I've refreshed the watcher!`)
-    }
-
-    private _ipCommand(message: Message) {
-        if (this.ip === '') {
-            message.reply('The ip is not set yet.')
-        } else {
-            message.reply(`The ip is: ${this.ip}`)
+    private _cleanContentPrefix(content: string, opt?: { prefix?: BotServices; count?: number }) {
+        content = content.slice(opt?.prefix?.length ?? opt?.count ?? 0)
+        if (content[0] === ' ') {
+            content = content.slice(1)
         }
-    }
-
-    private _setIPCommand(message: Message) {
-        if (this.ip === '') {
-            message.reply('The ip is not set yet.')
-        } else {
-            this.setPresenceMessage(this.ip)
-            message.reply(`IP set to: ${this.ip}`)
-        }
+        return content
     }
 
     private _handleCommands(message: Message) {
         let content = message.content.toLowerCase()
         content = content.slice(1)
-        for (const command of enumKeys(BotCommands)) {
-            const key = BotCommands[command]
-            if (content.startsWith(key)) {
-                this._commands[key](message)
-            }
+        if (content.startsWith(BotServices.WATCHER)) {
+            content = this._cleanContentPrefix(content, { prefix: BotServices.WATCHER })
+            this._watcher.handleCommands(content)
+        } else if (content.startsWith(BotServices.RATING)) {
+            content = this._cleanContentPrefix(content, { prefix: BotServices.RATING })
         }
     }
 
@@ -116,21 +90,5 @@ export default class BotHandler {
 
     private _connect() {
         this._bot.login(process.env.BOT_TOKEN)
-    }
-
-    public get ip() {
-        return this._ip
-    }
-
-    public setPresenceMessage(ip: string) {
-        this._bot.user?.setPresence({
-            status: 'online',
-            activity: {
-                name: ip,
-                type: 'WATCHING'
-            }
-        })
-
-        this._ip = ip
     }
 }
