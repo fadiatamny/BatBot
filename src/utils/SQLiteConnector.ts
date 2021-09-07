@@ -1,20 +1,23 @@
 import path from 'path'
 import { Database, OPEN_READWRITE, OPEN_CREATE } from 'sqlite3'
 import { BotError } from '../models/BotError.model'
+import { WorkQueue } from './WorkQueue'
 
 export default class SQLiteConnector {
     private static _instance: SQLiteConnector | null
     public static get instance() {
         if (!this._instance) {
-            this._instance = new SQLiteConnector(process.env.DB_NAME)
+            this._instance = new SQLiteConnector(`${process.env.DB_NAME}.db.sqlite`)
         }
         return this._instance
     }
 
+    private _workQueue: WorkQueue
     private _db: Database
 
     constructor(fileName?: string) {
-        const dbPath = path.resolve(__dirname, `../database/${fileName ?? 'database.sqlite'}`)
+        this._workQueue = new WorkQueue()
+        const dbPath = path.resolve(__dirname, `../database/${fileName ?? 'db.sqlite'}`)
         this._db = new Database(dbPath, OPEN_READWRITE | OPEN_CREATE, (err) => {
             if (err) {
                 throw new BotError('Error performing connection', err)
@@ -51,15 +54,20 @@ export default class SQLiteConnector {
     }
 
     public async execute(sql: string[], params?: any[][]) {
-        try {
-            await this.query('BEGIN;')
-            for (let i = 0; i < sql.length; ++i) {
-                await this.query(sql[i], params ? params[i] : undefined)
+        this._workQueue.add({
+            id: Date.now().toString(),
+            callback: async () => {
+                try {
+                    await this.query('BEGIN;')
+                    for (let i = 0; i < sql.length; ++i) {
+                        await this.query(sql[i], params ? params[i] : undefined)
+                    }
+                    await this.query('COMMIT;')
+                } catch (e) {
+                    await this.query('ROLLBACK;')
+                    throw new BotError('Transaction Failed', e)
+                }
             }
-            await this.query('COMMIT;')
-        } catch (e) {
-            await this.query('ROLLBACK;')
-            throw new BotError('Transaction Failed', e)
-        }
+        })
     }
 }
