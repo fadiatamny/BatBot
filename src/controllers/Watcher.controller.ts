@@ -31,8 +31,6 @@ export default class WatcherHandler {
 
     constructor(private _bot: Client) {
         this._ip = ''
-        this._bot = new Client()
-
         this._commands = {
             [WatcherCommands.IP]: this._ipCommand.bind(this),
             [WatcherCommands.REFRESH]: this._refreshCommand.bind(this),
@@ -62,8 +60,7 @@ export default class WatcherHandler {
         }
     }
 
-    public handleCommands(message: string) {
-        const content = message.toLowerCase()
+    public handleCommands(content: string, message: Message) {
         for (const command of enumKeys(WatcherCommands)) {
             const key = WatcherCommands[command]
             if (content.startsWith(key)) {

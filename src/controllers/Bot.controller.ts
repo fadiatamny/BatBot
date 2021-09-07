@@ -42,10 +42,10 @@ export default class BotHandler {
             [BotEvents.READY]: this._ready.bind(this),
             [BotEvents.MESSAGE]: this._message.bind(this)
         }
+        this._watcher = WatcherHandler.generateInstace(this._bot)
+
         this._addListeners()
         this._connect()
-
-        this._watcher = WatcherHandler.generateInstace(this._bot)
     }
 
     private _addListeners() {
@@ -74,7 +74,7 @@ export default class BotHandler {
         content = content.slice(1)
         if (content.startsWith(BotServices.WATCHER)) {
             content = this._cleanContentPrefix(content, { prefix: BotServices.WATCHER })
-            this._watcher.handleCommands(content)
+            this._watcher.handleCommands(content, message)
         } else if (content.startsWith(BotServices.RATING)) {
             content = this._cleanContentPrefix(content, { prefix: BotServices.RATING })
         }
@@ -88,7 +88,7 @@ export default class BotHandler {
         }
     }
 
-    private _connect() {
-        this._bot.login(process.env.BOT_TOKEN)
+    private async _connect() {
+        await this._bot.login(process.env.BOT_TOKEN)
     }
 }

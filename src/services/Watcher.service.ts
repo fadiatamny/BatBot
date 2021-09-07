@@ -1,5 +1,5 @@
 import http from 'http'
-import BotHandler from '../controllers/Bot.controller'
+import WatcherHandler from '../controllers/Watcher.controller'
 
 const HourInMS = 3.6e6
 
@@ -37,7 +37,7 @@ export default class Watcher {
                     http.get(options, function (res) {
                         res.on('data', function (chunk) {
                             const ip = chunk.toString()
-                            BotHandler.instance.setPresenceMessage(ip)
+                            WatcherHandler.instance?.setPresenceMessage(ip)
                             resolve(ip)
                         })
                     }).on('error', function (e) {
