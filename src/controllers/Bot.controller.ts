@@ -1,4 +1,5 @@
 import { Client, Message } from 'discord.js'
+import { removePrefix } from '../utils'
 import RatingController from './Rating.controller'
 import WatcherController from './Watcher.controller'
 
@@ -66,11 +67,7 @@ export default class BotController {
     }
 
     private _cleanContentPrefix(content: string, opt?: { prefix?: BotServices; count?: number }) {
-        content = content.slice(opt?.prefix?.length ?? opt?.count ?? 0)
-        if (content[0] === ' ') {
-            content = content.slice(1)
-        }
-        return content
+        return removePrefix(content, opt?.prefix?.length ?? opt?.count ?? 0)
     }
 
     private _handleCommands(message: Message) {
@@ -80,7 +77,8 @@ export default class BotController {
             content = this._cleanContentPrefix(content, { prefix: BotServices.WATCHER })
             this.watcher.handleCommands(content, message)
         } else if (content.startsWith(BotServices.RATING)) {
-            content = this._cleanContentPrefix(content, { prefix: BotServices.RATING })
+            content = this._cleanContentPrefix(content, { prefix: BotServices.WATCHER })
+            this.rating.handleCommands(content, message)
         }
     }
 

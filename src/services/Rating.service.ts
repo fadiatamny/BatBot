@@ -1,4 +1,6 @@
+import { BotError } from '../models/BotError.model'
 import { Rating } from '../models/rating.model'
+import { User } from '../models/user.model'
 import { Logger } from '../utils/Logger'
 import SQLiteConnector from '../utils/SQLiteConnector'
 
@@ -8,7 +10,7 @@ export default class RatingService {
 
     constructor() {
         this._logger = new Logger('RatingService')
-        this._connector = new SQLiteConnector(process.env.DB_NAME)
+        this._connector = SQLiteConnector.instance
         this._generateTables()
     }
 
@@ -38,11 +40,31 @@ export default class RatingService {
         }
     }
 
+    public async addUserIfNotExist(user: User) {
+        const query = `INSERT INTO User (id, displayName) VALUES (?, ?) WHERE NOT EXISTS (SELECT * FROM User WHERE id = ?);`
+        try {
+            await this._connector.query(query, [user.id, user.displayName, user.id])
+            this._logger.log('Successfully inserted new Rating')
+        } catch (e: any) {
+            this._logger.error(e.message, e.error)
+            throw e
+        }
+    }
+
+    public async getUserDisplayName(userId: string) {
+        const query = `SELECT displayName FROM User WHERE id = ?;`
+        try {
+            return await this._connector.get(query, [userId])
+        } catch (e: any) {
+            this._logger.error(e.message, e.error)
+            throw e
+        }
+    }
+
     public async add(rating: Rating) {
-        const query = `INSERT INTO rating (category, item, rating, raterId, date) VALUES (?, ?, ?, ?, ?);`
+        const query = `INSERT INTO Rating (category, item, rating, raterId, date) VALUES (?, ?, ?, ?, ?);`
         try {
             await this._connector.query(query, [rating.catergory, rating.item, rating.rating, rating.raterId])
-
             this._logger.log('Successfully inserted new Rating')
         } catch (e: any) {
             this._logger.error(e.message, e.error)
@@ -62,7 +84,7 @@ export default class RatingService {
     }
 
     public async update(ratingId: number, rating: Partial<Rating>) {
-        let query = `UPDATE rating `
+        let query = `UPDATE Rating `
         const params = []
 
         if (rating.catergory) {
@@ -90,7 +112,7 @@ export default class RatingService {
     }
 
     public async get(ratingId: number) {
-        const query = `SELECT * FROM rating WHERE id = ?;`
+        const query = `SELECT * FROM Rating WHERE id = ?;`
         try {
             return await this._connector.get(query, [ratingId])
         } catch (e: any) {
@@ -100,12 +122,17 @@ export default class RatingService {
     }
 
     public async list() {
-        const query = `SELECT * FROM rating;`
+        const query = `SELECT * FROM Rating;`
         try {
             return await this._connector.query(query)
         } catch (e: any) {
             this._logger.error(e.message, e.error)
             throw e
         }
+    }
+
+    public async query() {
+        // lodash implementation of query over all objects of list.
+        throw new BotError('Not Implemented', null)
     }
 }
