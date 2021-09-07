@@ -1,5 +1,5 @@
 import { BotError } from '../models/BotError.model'
-import { Rating } from '../models/rating.model'
+import { DbRating, Rating } from '../models/rating.model'
 import { User } from '../models/user.model'
 import { Logger } from '../utils/Logger'
 import SQLiteConnector from '../utils/SQLiteConnector'
@@ -41,8 +41,12 @@ export default class RatingService {
     }
 
     public async addUserIfNotExist(user: User) {
-        const query = `INSERT INTO User (id, displayName) VALUES (?, ?) WHERE NOT EXISTS (SELECT * FROM User WHERE id = ?);`
+        const query = `INSERT INTO User (id, displayName) VALUES (?, ?);`
         try {
+            const u = await this.getUserDisplayName(user.id)
+            if (u) {
+                return
+            }
             await this._connector.query(query, [user.id, user.displayName, user.id])
             this._logger.log('Successfully inserted new Rating')
         } catch (e: any) {
@@ -54,7 +58,8 @@ export default class RatingService {
     public async getUserDisplayName(userId: string) {
         const query = `SELECT displayName FROM User WHERE id = ?;`
         try {
-            return await this._connector.get(query, [userId])
+            const res = (await this._connector.get(query, [userId])) as User[]
+            return res[0] ?? null
         } catch (e: any) {
             this._logger.error(e.message, e.error)
             throw e
@@ -62,9 +67,9 @@ export default class RatingService {
     }
 
     public async add(rating: Rating) {
-        const query = `INSERT INTO Rating (category, item, rating, raterId, date) VALUES (?, ?, ?, ?, ?);`
+        const query = `INSERT INTO Rating (category, item, rating, raterId) VALUES (?, ?, ?, ?);`
         try {
-            await this._connector.query(query, [rating.catergory, rating.item, rating.rating, rating.raterId])
+            await this._connector.query(query, [rating.category, rating.item, rating.rating, rating.raterId])
             this._logger.log('Successfully inserted new Rating')
         } catch (e: any) {
             this._logger.error(e.message, e.error)
@@ -87,9 +92,9 @@ export default class RatingService {
         let query = `UPDATE Rating `
         const params = []
 
-        if (rating.catergory) {
+        if (rating.category) {
             query += `category = ?`
-            params.push(rating.catergory)
+            params.push(rating.category)
         }
         if (rating.item) {
             query += `item = ?`
@@ -114,7 +119,8 @@ export default class RatingService {
     public async get(ratingId: number) {
         const query = `SELECT * FROM Rating WHERE id = ?;`
         try {
-            return await this._connector.get(query, [ratingId])
+            const res = (await this._connector.get(query, [ratingId])) as DbRating[]
+            return res[0] ?? null
         } catch (e: any) {
             this._logger.error(e.message, e.error)
             throw e
@@ -124,7 +130,8 @@ export default class RatingService {
     public async list() {
         const query = `SELECT * FROM Rating;`
         try {
-            return await this._connector.query(query)
+            const res = (await this._connector.get(query)) as DbRating[]
+            return res ?? []
         } catch (e: any) {
             this._logger.error(e.message, e.error)
             throw e

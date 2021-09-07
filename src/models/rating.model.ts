@@ -4,7 +4,7 @@ export enum RatingCategories {
 }
 
 export interface Rating {
-    catergory: RatingCategories
+    category: RatingCategories
     item: string
     rating: number
     raterId: string
