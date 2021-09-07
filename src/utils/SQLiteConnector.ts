@@ -1,24 +1,30 @@
-import { Database } from 'sqlite3'
+import path from 'path'
+import { Database, OPEN_READWRITE, OPEN_CREATE } from 'sqlite3'
+import { BotError } from '../models/BotError.model'
 
 export default class SQLiteConnector {
+    private static _instance: SQLiteConnector | null
+    public static get instance() {
+        if (!this._instance) {
+            this._instance = new SQLiteConnector(process.env.DB_NAME)
+        }
+        return this._instance
+    }
+
     private _db: Database
 
     constructor(fileName?: string) {
-        const dbPath = `../database/${fileName ?? 'database.sqlite'}`
-        this._db = new Database(dbPath, (err) => {
+        const dbPath = path.resolve(__dirname, `../database/${fileName ?? 'database.sqlite'}`)
+        this._db = new Database(dbPath, OPEN_READWRITE | OPEN_CREATE, (err) => {
             if (err) {
-                throw {
-                    status: 500,
-                    message: 'Error performing connection',
-                    err: err
-                }
+                throw new BotError('Error performing connection', err)
             }
         })
 
         this._db.configure('busyTimeout', 1000)
     }
 
-    public async get(sql: string, params: any[]) {
+    public async get(sql: string, params?: any[]) {
         return new Promise((resolve, reject) => {
             this._db.serialize(() => {
                 this._db.all(sql, params, (err, rows) => {
@@ -35,12 +41,25 @@ export default class SQLiteConnector {
         })
     }
 
-    public async query(sql: string, params: any[]) {
+    public async query(sql: string, params?: any[]) {
         return new Promise((resolve, reject) => {
             this._db.run(sql, params, (err) => {
                 if (err) reject(err)
                 else resolve(undefined)
             })
         })
+    }
+
+    public async execute(sql: string[], params?: any[][]) {
+        try {
+            await this.query('BEGIN;')
+            for (let i = 0; i < sql.length; ++i) {
+                await this.query(sql[i], params ? params[i] : undefined)
+            }
+            await this.query('COMMIT;')
+        } catch (e) {
+            await this.query('ROLLBACK;')
+            throw new BotError('Transaction Failed', e)
+        }
     }
 }
