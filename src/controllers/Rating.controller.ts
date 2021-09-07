@@ -100,7 +100,7 @@ export default class RatingController {
                 throw new BotError('Error occured trying to fetch rater name')
             }
             embedded.addField(
-                `#${rating.id}\t\t${rating.category}\t\t\t${rating.item}\t\t\t${rating.rating}\t\t${rater.displayName}\t\t${rating.date}`,
+                `${rating.id}\t\t${rating.category}\t\t\t${rating.item}\t\t\t${rating.rating}\t\t${rater.displayName}\t\t${rating.date}`,
                 '---',
                 false
             )
