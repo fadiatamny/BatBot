@@ -1,4 +1,5 @@
 import { Client, Message } from 'discord.js'
+import { UserConfig } from '../services/UserConfig.service'
 import RatingController from './Rating.controller'
 import WatcherController from './Watcher.controller'
 
@@ -37,6 +38,7 @@ export default class BotController {
 
     public watcher: WatcherController
     public rating: RatingController
+    public config: UserConfig
 
     constructor(private _prefix: string = '!') {
         this._bot = new Client()
@@ -47,6 +49,7 @@ export default class BotController {
 
         this.watcher = new WatcherController(this._bot)
         this.rating = new RatingController(this._bot)
+        this.config = new UserConfig()
 
         this._addListeners()
         this._connect()

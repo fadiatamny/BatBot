@@ -1,6 +1,7 @@
 import WatcherService from '../services/Watcher.service'
 import { Client, Message } from 'discord.js'
 import { enumKeys } from '../utils'
+import BotController from './Bot.controller'
 
 enum WatcherCommands {
     REFRESH = 'refresh',
@@ -49,7 +50,25 @@ export default class WatcherController {
         }
     }
 
-    public handleCommands(content: string, message: Message) {
+    private async _isInCorrectChannel () {
+        const available = BotController.instance.config.ipwatcher
+        for (const c of available) {
+            const guild = await this._bot.guilds.fetch(c.serverId)
+            if (guild) {
+                guild.channels.cache.map((channel) => {
+                    if (channel.name === c.channelName) {
+                        return true
+                    }
+                })
+            }
+        }
+
+        return false
+    }
+
+    public async handleCommands(content: string, message: Message) {
+        const isInCorrectChannel = await this._isInCorrectChannel()
+        if (!isInCorrectChannel) { return }
         for (const command of enumKeys(WatcherCommands)) {
             const key = WatcherCommands[command]
             if (content.startsWith(key)) {
@@ -58,15 +77,18 @@ export default class WatcherController {
         }
     }
 
-    public setPresenceMessage(ip: string) {
-        this._bot.user?.setPresence({
-            status: 'online',
-            activity: {
-                name: ip,
-                type: 'WATCHING'
+    public async setPresenceMessage(ip: string) {
+        const available = BotController.instance.config.ipwatcher
+        for (const c of available) {
+            const guild = await this._bot.guilds.fetch(c.serverId)
+            if (guild) {
+                guild.channels.cache.map((channel) => {
+                    if (channel.name === c.channelName) {
+                        channel.setTopic(`The Ip is: ${ip}`)
+                    }
+                })
             }
-        })
-
+        }
         this._ip = ip
     }
 
