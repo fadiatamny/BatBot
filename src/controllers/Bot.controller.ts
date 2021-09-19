@@ -66,19 +66,29 @@ export default class BotController {
         this.watcher.start()
     }
 
-    private _cleanContentPrefix(content: string, opt?: { prefix?: BotServices; count?: number }) {
-        return removePrefix(content, opt?.prefix?.length ?? opt?.count ?? 0)
+    private _cleanContentPrefix(content: string) {
+        const split = content.split(' ')
+        split.shift()
+        return split.join(' ')
     }
 
     private _handleCommands(message: Message) {
-        let content = message.content.toLowerCase()
-        content = content.slice(1)
-        if (content.startsWith(BotServices.WATCHER)) {
-            content = this._cleanContentPrefix(content, { prefix: BotServices.WATCHER })
-            this.watcher.handleCommands(content, message)
-        } else if (content.startsWith(BotServices.RATING)) {
-            content = this._cleanContentPrefix(content, { prefix: BotServices.WATCHER })
-            this.rating.handleCommands(content, message)
+        const content = message.content.substring(1)
+        const service = content.split(' ')[0].toLocaleLowerCase()
+
+        switch (service) {
+            case BotServices.WATCHER:
+                const cleaned = this._cleanContentPrefix(content)
+                this.watcher.handleCommands(cleaned, message)
+                break
+            case BotServices.RATING:
+                // content = this._cleanContentPrefix(content)
+                // this.rating.handleCommands(content, message)
+                // message that service is unavailable
+                break
+            default:
+                // return message of service not available.
+                break
         }
     }
 
