@@ -4,8 +4,9 @@
   "description": "A discordjs bot that watches ip changes",
   "main": "index.js",
   "scripts": {
-    "start": "node ./build/index.js",
-    "dev": "ts-node ./src/index.ts",
+    "start": "NODE_ENV=production node ./build/index.js",
+    "dev": "NODE_ENV=development ts-node ./src/index.ts",
+    "dev-watch": "ts-node-dev ./src/index.ts",
     "build": "tsc"
   },
   "keywords": [],
@@ -15,20 +16,22 @@
   },
   "readmeFilename": "README.md",
   "bugs": {
-    "url": "https://github.com/fadiatamny/IPWatcher/issues"
+    "url": "https://github.com/fadiatamny/BatBot/issues"
   },
-  "homepage": "https://github.com/fadiatamny/IPWatcher#readme",
+  "homepage": "https://github.com/fadiatamny/BatBot#readme",
   "license": "GPL-3.0 License",
   "repository": {
     "type": "git",
-    "url": "https://github.com/fadiatamny/IPWatcher.git"
+    "url": "https://github.com/fadiatamny/BatBot.git"
   },
   "dependencies": {
     "discord.js": "^12.5.3",
-    "dotenv": "^10.0.0"
+    "dotenv": "^10.0.0",
+    "sqlite3": "^5.0.2"
   },
   "devDependencies": {
     "@types/node": "^16.4.10",
+    "@types/sqlite3": "^3.1.7",
     "@typescript-eslint/eslint-plugin": "^4.18.0",
     "@typescript-eslint/parser": "^4.18.0",
     "eslint": "^7.22.0",
@@ -36,6 +39,7 @@
     "eslint-plugin-prettier": "^3.3.1",
     "prettier": "^2.2.1",
     "ts-node": "^10.1.0",
+    "ts-node-dev": "^1.1.8",
     "typescript": "^4.3.5"
   }
 }
