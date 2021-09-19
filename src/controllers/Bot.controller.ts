@@ -1,5 +1,4 @@
 import { Client, Message } from 'discord.js'
-import { removePrefix } from '../utils'
 import RatingController from './Rating.controller'
 import WatcherController from './Watcher.controller'
 

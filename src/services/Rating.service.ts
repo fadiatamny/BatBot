@@ -1,5 +1,5 @@
 import { DbRating, Rating, RatingQuery } from '../models/rating.model'
-import { User } from '../models/user.model'
+import { User } from '../models/User.model'
 import { Logger } from '../utils/Logger'
 import SQLiteConnector from '../utils/SQLiteConnector'
 
