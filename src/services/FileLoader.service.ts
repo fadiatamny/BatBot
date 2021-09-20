@@ -15,7 +15,7 @@ export class FileLoader {
             if (!this.fileExists(fullPath)) {
                 throw Error('File doesnt exits')
             }
-            return fs.readFileSync(path.join(__dirname, fullPath), { encoding })
+            return fs.readFileSync(fullPath, { encoding })
         } catch (e) {
             this._logger.warn(e)
             return null

@@ -83,7 +83,7 @@ export default class WatcherController {
             const guild = await this._bot.guilds.fetch(c.serverId)
             if (guild) {
                 guild.channels.cache.map((channel) => {
-                    if (channel.name === c.channelName) {
+                    if (channel.name === c.channelName || c.channelName === '*') {
                         channel.setTopic(`The Ip is: ${ip}`)
                     }
                 })
