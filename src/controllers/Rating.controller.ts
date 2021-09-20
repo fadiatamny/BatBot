@@ -1,6 +1,6 @@
 import RatingService from '../services/Rating.service'
 import { Client, Message, MessageEmbed } from 'discord.js'
-import { enumKeys, removePrefix } from '../utils'
+import { enumKeys } from '../utils'
 import { DbRating, Rating, RatingCategories, RatingQuery } from '../models/rating.model'
 import { BotError } from '../models/BotError.model'
 import { Logger } from '../utils/Logger'
@@ -128,13 +128,14 @@ export default class RatingController {
             this._logger.error(e)
         }
     }
+
     public handleCommands(content: string, message: Message) {
-        for (const command of enumKeys(RatingComamnds)) {
-            const key = RatingComamnds[command]
-            if (content.startsWith(key)) {
-                content = removePrefix(content, key.length)
-                this._commands[key](content, message)
-            }
-        }
+        // for (const command of enumKeys(RatingComamnds)) {
+        //     const key = RatingComamnds[command]
+        //     if (content.startsWith(key)) {
+        //         content = removePrefix(content, key.length)
+        //         this._commands[key](content, message)
+        //     }
+        // }
     }
 }
