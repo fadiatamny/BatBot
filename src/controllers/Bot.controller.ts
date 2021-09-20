@@ -24,7 +24,7 @@ export default class BotController {
     }
 
     public static specificInstance(prefix?: string) {
-        if (this.instance) {
+        if (this._instance) {
             this.instance._removeListeners()
             this.instance._bot.destroy()
             this._instance = null
