@@ -122,7 +122,7 @@ export default class RatingController {
             }
 
             const embedded = await this._ratingsToEmbeddedTable(ratings)
-            message.channel.send(embedded)
+            message.channel.send({ embeds: [embedded] })
         } catch (e: any) {
             message.reply(`There was an error listing the rating`)
             this._logger.error(e)

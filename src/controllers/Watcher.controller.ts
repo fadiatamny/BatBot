@@ -1,7 +1,8 @@
 import WatcherService from '../services/Watcher.service'
-import { Client, Message } from 'discord.js'
+import { Client, Message, TextChannel } from 'discord.js'
 import { enumKeys } from '../utils'
 import BotController from './Bot.controller'
+import { Logger } from '../utils/Logger'
 
 enum WatcherCommands {
     REFRESH = 'refresh',
@@ -13,6 +14,7 @@ export default class WatcherController {
     private _ip: string
     private _commands: { [key: string]: (...args: any[]) => void }
     private _service: WatcherService
+    private _logger: Logger
 
     public get ip() {
         return this._ip
@@ -26,6 +28,7 @@ export default class WatcherController {
             [WatcherCommands.SET_IP]: this._setIPCommand.bind(this)
         }
         this._service = new WatcherService()
+        this._logger = new Logger('WatcherController')
     }
 
     private _refreshCommand(message: Message) {
@@ -84,7 +87,10 @@ export default class WatcherController {
             if (guild) {
                 guild.channels.cache.map((channel) => {
                     if (channel.name === c.channelName || c.channelName === '*') {
-                        channel.setTopic(`The Ip is: ${ip}`)
+                        if (channel.isText() && !channel.isThread()) {
+                            let textChannel = channel as TextChannel
+                            textChannel.setTopic(`The Ip is: ${ip}`)
+                        }
                     }
                 })
             }
