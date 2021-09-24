@@ -54,7 +54,7 @@ export default class MusicController {
             queue.metadata.channel.send(`⏱ | **${track.title}** queued at index #${queue.tracks.length}`)
         })
         this._player.on('error', (e: any) => {
-            this._logger.warn('error occured')
+            this._logger.warn('error occured with the discord-player instance')
             // this._logger.error(e)
         })
     }
@@ -106,6 +106,10 @@ export default class MusicController {
                 return
             }
 
+            if (!musicQueue.playing && !this._addedInitialTrack) {
+                this._addedInitialTrack = true
+            }
+
             await message.reply(`⏱ | Loading your ${searchResult.playlist ? 'playlist' : 'track'}...`)
             const playlist = await searchResult.playlist
             if (playlist) {
@@ -114,8 +118,7 @@ export default class MusicController {
                 musicQueue.addTrack(searchResult.tracks[0])
             }
 
-            if (!musicQueue.playing && !this._addedInitialTrack) {
-                this._addedInitialTrack = true
+            if (this._addedInitialTrack) {
                 await musicQueue.play()
             }
         } catch (e: any) {
