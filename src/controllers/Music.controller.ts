@@ -53,6 +53,10 @@ export default class MusicController {
             }
             queue.metadata.channel.send(`⏱ | **${track.title}** queued at index #${queue.tracks.length}`)
         })
+        this._player.on('error', (e: any) => {
+            this._logger.warn('error occured')
+            // this._logger.error(e)
+        })
     }
 
     private async _playCommand(message: Message, content: string) {
