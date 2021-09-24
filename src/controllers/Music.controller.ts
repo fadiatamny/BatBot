@@ -1,6 +1,7 @@
 import { Client, Message, MessageEmbed, Role } from 'discord.js'
 import { Logger } from '../utils/Logger'
-import { enumKeys, removeFirstWord } from '../utils'
+import { WorkQueue } from '../utils/WorkQueue'
+import { delay, enumKeys, removeFirstWord } from '../utils'
 import { Player, Track } from 'discord-player'
 import { QueryType } from 'discord-player'
 import { BotError } from '../models/BotError.model'
@@ -8,6 +9,7 @@ import BotController from './Bot.controller'
 
 enum MusicCommands {
     PLAY = 'add',
+    PLAYING = 'playing',
     SKIP = 'skip',
     STOP = 'stop',
     DISCONNECT = 'disconnect',
@@ -20,10 +22,13 @@ export default class MusicController {
     private _commands: { [key: string]: (...args: any[]) => void }
     private _logger: Logger
     private _player: Player
+    private _workQueue: WorkQueue
+    private _addedInitialTrack: boolean
 
     constructor(private _bot: Client) {
         this._commands = {
             [MusicCommands.PLAY]: this._playCommand.bind(this),
+            [MusicCommands.PLAYING]: this._playingCommand.bind(this),
             [MusicCommands.SKIP]: this._skipCommand.bind(this),
             [MusicCommands.DISCONNECT]: this._stopCommand.bind(this),
             [MusicCommands.DC]: this._stopCommand.bind(this),
@@ -31,12 +36,15 @@ export default class MusicController {
             [MusicCommands.CLEAR]: this._stopCommand.bind(this),
             [MusicCommands.REMOVE]: this._removeCommand.bind(this)
         }
+        this._addedInitialTrack = false
 
+        this._workQueue = new WorkQueue()
         this._player = new Player(this._bot)
         this._logger = new Logger('MusicController')
-        this._player.on('trackStart', (queue: any, track: Track) =>
-            queue.metadata.channel.send(`🎶 | Now playing **${track.title}** - ${track.duration} \n[${track.url}]`)
-        )
+        this._player.on('trackStart', (queue: any, track: Track) => {
+            this._addedInitialTrack = false
+            queue.metadata.channel.send(`🎶 | Now playing **${track.title}** - ${track.duration} \n📃 | [${track.url}]`)
+        })
         this._player.on('trackAdd', (queue: any, track: Track) =>
             queue.metadata.channel.send(`⏱ | **${track.title}** queued at index #${queue.tracks.length}`)
         )
@@ -97,8 +105,36 @@ export default class MusicController {
                 musicQueue.addTrack(searchResult.tracks[0])
             }
 
-            if (!musicQueue.playing) {
-                await musicQueue.play()
+            if (!musicQueue.playing && !this._addedInitialTrack) {
+                this._addedInitialTrack = true
+                await musicQueue.play(undefined, {
+                    filtersUpdate: true,
+                    immediate: true
+                })
+            }
+        } catch (e: any) {
+            this._logger.log('There was an error with playCommand')
+            this._logger.error(e)
+        }
+    }
+
+    private async _playingCommand(message: Message) {
+        try {
+            const guild = this._bot.guilds.cache.get(message.guild!.id!)
+            const musicQueue = await this._player.createQueue(guild!, {
+                metadata: {
+                    channel: message.channel
+                }
+            })
+
+            if (musicQueue && musicQueue.playing) {
+                const track = await musicQueue.nowPlaying()
+                const time = await musicQueue.getPlayerTimestamp()
+                message.reply(
+                    `🎶 | Currently Playing ${track.title}\n⏱ | ${time.current}/${time.end}\n📃 | ${track.url}`
+                )
+            } else {
+                message.reply('❌ | No music is being played!')
             }
         } catch (e: any) {
             this._logger.log('There was an error with playCommand')
@@ -215,12 +251,23 @@ export default class MusicController {
             for (const command of enumKeys(MusicCommands)) {
                 const key = MusicCommands[command]
                 if (first === key) {
-                    this._commands[key](message, rest)
+                    if (key === MusicCommands.PLAYING) {
+                        this._commands[key](message, rest)
+                    } else {
+                        this._workQueue.add({
+                            id: key,
+                            callback: async () => await this._commands[key](message, rest)
+                        })
+                    }
                     return
                 }
             }
 
-            this._queue(message)
+            if (!rest || rest === '') {
+                this._queue(message)
+            } else {
+                message.reply('This command is not supported')
+            }
         } catch (e: any) {
             message.reply('Something has gone terribly wrong! 😵‍💫')
             this._logger.log('There was an error with handleCommands')

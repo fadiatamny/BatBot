@@ -39,7 +39,7 @@ export default class BotController {
             this._instance = null
         }
 
-        this._instance = new BotController(process.env.PREFIX)
+        this._instance = new BotController()
     }
 
     private _bot: Client
@@ -52,7 +52,7 @@ export default class BotController {
     public watcher: WatcherController | undefined
     public rating: RatingController | undefined
 
-    constructor(private _prefix: string = '!') {
+    constructor() {
         this._reconnectAttemptsCount = 0
         const intents = [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES]
         this._bot = new Client({ intents })
@@ -110,7 +110,7 @@ export default class BotController {
     }
 
     private _message(message: Message) {
-        if (message.content.startsWith(this._prefix)) {
+        if (message.content.startsWith(this.config.prefix)) {
             this._handleCommands(message)
             return
         }
