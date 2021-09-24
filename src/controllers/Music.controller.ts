@@ -11,9 +11,8 @@ enum MusicCommands {
     DISCONNECT = 'disconnect',
     DC = 'dc',
     CLEAR = 'clear',
-    REMOVE = 'remove',
+    REMOVE = 'remove'
 }
-
 
 export default class MusicController {
     private _commands: { [key: string]: (...args: any[]) => void }
@@ -28,37 +27,42 @@ export default class MusicController {
             [MusicCommands.DC]: this._stopCommand.bind(this),
             [MusicCommands.STOP]: this._stopCommand.bind(this),
             [MusicCommands.CLEAR]: this._stopCommand.bind(this),
-            [MusicCommands.REMOVE]: this._removeCommand.bind(this),
+            [MusicCommands.REMOVE]: this._removeCommand.bind(this)
         }
         console.log(_bot)
         this._player = new Player(this._bot)
         this._logger = new Logger('MusicController')
-        this._player.on('trackStart', (queue: any, track: Track) => queue.metadata.channel.send(`🎶 | Now playing **${track.title}** - ${track.duration} \n[${track.url}]`))
-        this._player.on('trackAdd', (queue: any, track: Track) => queue.metadata.channel.send(`⏱ | **${track.title}** queued at index #${queue.tracks.length}`))
-
+        this._player.on('trackStart', (queue: any, track: Track) =>
+            queue.metadata.channel.send(`🎶 | Now playing **${track.title}** - ${track.duration} \n[${track.url}]`)
+        )
+        this._player.on('trackAdd', (queue: any, track: Track) =>
+            queue.metadata.channel.send(`⏱ | **${track.title}** queued at index #${queue.tracks.length}`)
+        )
     }
 
     private async _playCommand(content: string, message: Message) {
         try {
-            this._logger.log("_playCommand")
+            this._logger.log('_playCommand')
             if (!message.member?.voice.channel)
                 return message.reply('You need to be in a voice channel to queue music!')
 
-            if (message.guild!.me && message.guild!.me.voice.channel && message.member!.voice.channel !== message.guild!.me.voice.channel) {
+            if (
+                message.guild!.me &&
+                message.guild!.me.voice.channel &&
+                message.member!.voice.channel !== message.guild!.me.voice.channel
+            ) {
                 return message.reply(`I'm already occupied in another voice channel!`)
             }
 
             const guild = this._bot.guilds.cache.get(message.guildId!)
             const voiceChannel = message.member!.voice.channel
 
-            const searchResult = await this._player
-                .search(content, {
-                    requestedBy: message.member.nickname!,
-                    searchEngine: QueryType.AUTO,
-                })
+            const searchResult = await this._player.search(content, {
+                requestedBy: message.member.nickname!,
+                searchEngine: QueryType.AUTO
+            })
 
-            if (!searchResult || !searchResult.tracks.length)
-                return message.reply('No results were found!');
+            if (!searchResult || !searchResult.tracks.length) return message.reply('No results were found!')
 
             const musicQueue = await this._player.createQueue(guild!, {
                 metadata: {
@@ -71,14 +75,16 @@ export default class MusicController {
             } catch {
                 this._player.deleteQueue(message.guild!.id)
                 message.reply('Could not join your voice channel!')
-                return void this._logger.error("could not join voiceChannel: " + voiceChannel)
+                return void this._logger.error('could not join voiceChannel: ' + voiceChannel)
             }
 
-            this._logger.log("addTracks")
+            this._logger.log('addTracks')
             await message.reply(`⏱ | Loading your ${searchResult.playlist ? 'playlist' : 'track'}...`)
-            await searchResult.playlist ? musicQueue.addTracks(searchResult.tracks) : musicQueue.addTrack(searchResult.tracks[0])
+            ;(await searchResult.playlist)
+                ? musicQueue.addTracks(searchResult.tracks)
+                : musicQueue.addTrack(searchResult.tracks[0])
 
-            this._logger.log("play")
+            this._logger.log('play')
             if (!musicQueue.playing) await musicQueue.play()
         } catch (e: any) {
             this._logger.log('There was an error with _playCommand')
@@ -89,12 +95,9 @@ export default class MusicController {
     private async _skipCommand(content: string, message: Message) {
         try {
             const musicQueue = this._player.getQueue(message.guildId!)
-            if (!musicQueue || !musicQueue.playing)
-                return void message.reply('❌ | No music is being played!')
-            const track = musicQueue.current;
-            return void message.reply(musicQueue.skip() ?
-                `✅ | Skipped **${track}**!` :
-                '❌ | Something went wrong!')
+            if (!musicQueue || !musicQueue.playing) return void message.reply('❌ | No music is being played!')
+            const track = musicQueue.current
+            return void message.reply(musicQueue.skip() ? `✅ | Skipped **${track}**!` : '❌ | Something went wrong!')
         } catch (e: any) {
             this._logger.log('There was an error with _skipCommand')
             this._logger.error(e)
@@ -104,8 +107,7 @@ export default class MusicController {
     private async _stopCommand(content: string, message: Message) {
         try {
             const musicQueue = this._player.getQueue(message.guildId!)
-            if (!musicQueue || !musicQueue.playing)
-                return void message.reply('❌ | No music is being played!')
+            if (!musicQueue || !musicQueue.playing) return void message.reply('❌ | No music is being played!')
             musicQueue.destroy()
             return void message.reply('🛑 | bye-bye!')
         } catch (e: any) {
@@ -166,25 +168,22 @@ export default class MusicController {
 
     public handleCommands(content: string, message: Message) {
         try {
-            this._logger.log("handleCommand")
+            this._logger.log('handleCommand')
             if (!message || !message.guild || !message.member) {
                 return
             }
-            if (!content || !content.length)
-                return void this._queue(content, message)
+            if (!content || !content.length) return void this._queue(content, message)
             for (const command of enumKeys(MusicCommands)) {
                 const key = MusicCommands[command]
                 if (content.startsWith(key)) {
-                    content = content.substr(content.indexOf(" ") + 1);
+                    content = content.substr(content.indexOf(' ') + 1)
                     return void this._commands[key](content, message)
                 }
             }
         } catch (e: any) {
             message.reply('Something has gone terribly wrong! 😵‍💫')
-            this._logger.log("There was an error with handleCommands")
+            this._logger.log('There was an error with handleCommands')
             this._logger.error(e)
         }
-
     }
-
 }

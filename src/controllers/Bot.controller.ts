@@ -9,7 +9,7 @@ import { Logger } from '../utils/Logger'
 enum BotServices {
     WATCHER = 'watcher',
     RATING = 'rating',
-    MUSIC = 'queue',
+    MUSIC = 'queue'
 }
 
 enum BotEvents {
@@ -41,23 +41,30 @@ export default class BotController {
     private _handlers: { [key: string]: (...args: any[]) => void }
     private _logger: Logger
 
-    public watcher: WatcherController
-    public rating: RatingController
     public config: UserConfig
     public music: MusicController
+    public watcher: WatcherController | undefined
+    public rating: RatingController | undefined
 
     constructor(private _prefix: string = '!') {
-        this._bot = new Client({ intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES]})
+        this._bot = new Client({
+            intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES]
+        })
         this._logger = new Logger('BotController')
         this._handlers = {
             [BotEvents.READY]: this._ready.bind(this),
             [BotEvents.MESSAGE]: this._message.bind(this)
         }
 
-        this.watcher = new WatcherController(this._bot)
-        this.rating = new RatingController(this._bot)
         this.config = new UserConfig()
         this.music = new MusicController(this._bot)
+
+        if (this.config.ipwatcher) {
+            this.watcher = new WatcherController(this._bot)
+        }
+        if (this.config.rating) {
+            this.rating = new RatingController(this._bot)
+        }
 
         this._addListeners()
         this._connect()
@@ -73,7 +80,7 @@ export default class BotController {
 
     private _ready() {
         console.log('The bot is connected !')
-        this.watcher.start()
+        this.watcher?.start()
     }
 
     private _cleanContentPrefix(content: string) {
@@ -89,12 +96,10 @@ export default class BotController {
 
         switch (service) {
             case BotServices.WATCHER:
-                this.watcher.handleCommands(cleaned, message)
+                this.watcher?.handleCommands(cleaned, message)
                 break
             case BotServices.RATING:
-                // content = this._cleanContentPrefix(content)
-                // this.rating.handleCommands(content, message)
-                // message that service is unavailable
+                this.rating?.handleCommands(cleaned, message)
                 break
             case BotServices.MUSIC:
                 this.music.handleCommands(cleaned, message)

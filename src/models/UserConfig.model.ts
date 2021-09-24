@@ -7,8 +7,14 @@ export interface MusicConfig {
     djRole: string
 }
 
+export interface RatingConfig {
+    dbName: string
+    categories: string[]
+}
+
 export interface UserConfig {
-    ipwatcher: WatcherConfig[]
     prefix: string
     music: MusicConfig
+    ipwatcher?: WatcherConfig[]
+    rating?: RatingConfig
 }
