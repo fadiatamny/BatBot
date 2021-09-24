@@ -1,9 +1,8 @@
 version: "3.5"
 
 services: 
-    ipwatcher:
-        container_name: IPWatcher
+    batbot:
+        container_name: BatBot
         build:
             context: ./
             dockerfile: ./Dockerfile
-        env_file: .env

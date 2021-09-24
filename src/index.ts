@@ -1,6 +1,12 @@
 import * as dotenv from 'dotenv'
-dotenv.config()
+import path from 'path'
+import BotController from './controllers/Bot.controller'
 
-import BotHandler from './BotHandler'
+const envName = process.env.NODE_ENV ?? 'development'
+dotenv.config({ path: path.join(__dirname, `../${envName}.env`) })
 
-BotHandler.specificInstance(process.env.PREFIX)
+try {
+    BotController.initInstance()
+} catch (e) {
+    console.log(e)
+}

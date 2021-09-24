@@ -1,33 +1,21 @@
 import http from 'http'
-import BotHandler from './BotHandler'
+import BotController from '../controllers/Bot.controller'
+import { Logger } from '../utils/Logger'
 
 const HourInMS = 3.6e6
 
-export default class Watcher {
-    private static _instance: Watcher | null = null
-    public static get instance() {
-        if (!this._instance) {
-            this._instance = new Watcher()
-        }
+export default class WatcherService {
+    private _job: NodeJS.Timer | undefined
+    private _logger: Logger
 
-        return this._instance
+    constructor(private _pollingInterval: number = HourInMS) {
+        this._logger = new Logger('WatcherService')
     }
-
-    public static specificInstance(time: number) {
-        if (this.instance) {
-            this._instance = null
-        }
-
-        this._instance = new Watcher(time)
-    }
-
-    private _job?: NodeJS.Timer
-
-    constructor(private _pollingInterval: number = HourInMS) {}
 
     private _poll() {
         try {
             return new Promise<string>((resolve, reject) => {
+                this._logger.log('started Polling')
                 const options = {
                     host: 'ipv4bot.whatismyipaddress.com',
                     port: 80,
@@ -37,18 +25,20 @@ export default class Watcher {
                     http.get(options, function (res) {
                         res.on('data', function (chunk) {
                             const ip = chunk.toString()
-                            BotHandler.instance.setPresenceMessage(ip)
+                            BotController.instance?.watcher?.setPresenceMessage(ip)
                             resolve(ip)
                         })
                     }).on('error', function (e) {
                         reject(e.message)
                     })
-                } catch (e) {
+                } catch (e: any) {
                     reject(e.message)
+                } finally {
+                    this._logger.log('finished Polling')
                 }
             })
         } catch (e) {
-            console.log(e)
+            this._logger.error(e)
             return ''
         }
     }
