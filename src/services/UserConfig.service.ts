@@ -9,7 +9,7 @@ export class UserConfig implements UserConfigModel {
     private _rating?: RatingConfig
 
     constructor() {
-        const data = FileLoader.loadFromFile('../../.config.json')
+        const data = FileLoader.loadFromFile(`../../${process.env.NODE_ENV ?? 'development'}.config.json`)
         if (data) {
             const obj = JSON.parse(data) as Partial<UserConfigModel>
 

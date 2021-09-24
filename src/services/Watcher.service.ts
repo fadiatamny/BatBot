@@ -9,7 +9,7 @@ export default class WatcherService {
     private _logger: Logger
 
     constructor(private _pollingInterval: number = HourInMS) {
-        this._logger = new Logger('RatingService')
+        this._logger = new Logger('WatcherService')
     }
 
     private _poll() {
@@ -25,7 +25,7 @@ export default class WatcherService {
                     http.get(options, function (res) {
                         res.on('data', function (chunk) {
                             const ip = chunk.toString()
-                            BotController.instance?.watcher.setPresenceMessage(ip)
+                            BotController.instance?.watcher?.setPresenceMessage(ip)
                             resolve(ip)
                         })
                     }).on('error', function (e) {

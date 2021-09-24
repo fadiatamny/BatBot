@@ -15,6 +15,13 @@ export class WorkQueue {
         this._queue = []
     }
 
+    private _clearInterval() {
+        if (this._interval) {
+            clearInterval(this._interval)
+            this._interval = null
+        }
+    }
+
     private async _execute() {
         if (this._queue.length) {
             const work = this._queue.pop()
@@ -22,6 +29,9 @@ export class WorkQueue {
                 await work?.callback()
             } catch (e) {
                 this._logger.error('Error occured while executing ', work?.id)
+            } finally {
+                this._clearInterval()
+                this._interval = setTimeout(this._execute.bind(this), this._executionInterval)
             }
         } else {
             this.clear()
@@ -32,7 +42,7 @@ export class WorkQueue {
         if (this._interval) {
             return
         }
-        this._interval = setInterval(this._execute.bind(this), this._executionInterval)
+        this._interval = setTimeout(this._execute.bind(this), this._executionInterval)
     }
 
     public add(work: Work) {
@@ -41,10 +51,7 @@ export class WorkQueue {
     }
 
     public clear() {
-        if (this._interval) {
-            clearInterval(this._interval)
-            this._interval = null
-        }
+        this._clearInterval()
         this._queue = []
     }
 }

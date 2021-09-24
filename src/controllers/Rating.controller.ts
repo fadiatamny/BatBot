@@ -2,6 +2,7 @@ import RatingService from '../services/Rating.service'
 import { Client, Message, MessageEmbed } from 'discord.js'
 import { DbRating, Rating, RatingCategories, RatingQuery } from '../models/rating.model'
 import { BotError } from '../models/BotError.model'
+import { enumKeys, removeFirstWord } from '../utils'
 import { Logger } from '../utils/Logger'
 
 enum RatingComamnds {
@@ -120,8 +121,8 @@ export default class RatingController {
                 ratings = await this._service.list()
             }
 
-            const embedded = await this._ratingsToEmbeddedTable(ratings)
-            message.channel.send(embedded)
+            const embed = await this._ratingsToEmbeddedTable(ratings)
+            message.channel.send({ embeds: [embed] })
         } catch (e: any) {
             message.reply(`There was an error listing the rating`)
             this._logger.error(e)
@@ -129,12 +130,14 @@ export default class RatingController {
     }
 
     public handleCommands(content: string, message: Message) {
-        // for (const command of enumKeys(RatingComamnds)) {
-        //     const key = RatingComamnds[command]
-        //     if (content.startsWith(key)) {
-        //         content = removePrefix(content, key.length)
-        //         this._commands[key](content, message)
-        //     }
-        // }
+        const { first, rest } = removeFirstWord(content)
+
+        for (const command of enumKeys(RatingComamnds)) {
+            const key = RatingComamnds[command]
+            if (first === key) {
+                this._commands[key](rest, message)
+                return
+            }
+        }
     }
 }
