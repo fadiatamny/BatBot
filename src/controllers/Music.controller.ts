@@ -2,7 +2,7 @@ import { Client, Message, MessageEmbed, Role } from 'discord.js'
 import { Logger } from '../utils/Logger'
 import { WorkQueue } from '../utils/WorkQueue'
 import { enumKeys, removeFirstWord } from '../utils'
-import { Player, Track } from 'discord-player'
+import { Player, Queue, Track } from 'discord-player'
 import { QueryType } from 'discord-player'
 import { BotError } from '../models/BotError.model'
 import BotController from './Bot.controller'
@@ -41,9 +41,11 @@ export default class MusicController {
         this._workQueue = new WorkQueue()
         this._player = new Player(this._bot)
         this._logger = new Logger('MusicController')
-        this._player.on('trackStart', (queue: any, track: Track) => {
+        this._player.on('trackStart', (queue: Queue<any>, track: Track) => {
             this._addedInitialTrack = false
-            queue.metadata.channel.send(`🎶 | Now playing **${track.title}** - ${track.duration} \n📃 | [${track.url}]`)
+            queue.metadata?.channel.send(
+                `🎶 | Now playing **${track.title}** - ${track.duration} \n📃 | [${track.url}]`
+            )
             BotController.instance.setPresence([
                 {
                     name: `🎶 | Now playing **${track.title}** - ${track.duration}`,
@@ -52,7 +54,7 @@ export default class MusicController {
                 }
             ])
         })
-        this._player.on('trackAdd', (queue: any, track: Track) =>
+        this._player.on('trackAdd', (queue: Queue<any>, track: Track) =>
             queue.metadata.channel.send(`⏱ | **${track.title}** queued at index #${queue.tracks.length}`)
         )
     }
@@ -114,10 +116,7 @@ export default class MusicController {
 
             if (!musicQueue.playing && !this._addedInitialTrack) {
                 this._addedInitialTrack = true
-                await musicQueue.play(undefined, {
-                    filtersUpdate: true,
-                    immediate: true
-                })
+                await musicQueue.play()
             }
         } catch (e: any) {
             this._logger.log('There was an error with playCommand')
