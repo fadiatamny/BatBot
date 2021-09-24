@@ -1,4 +1,4 @@
-FROM node:16.10.0 as IPWatcher
+FROM node:16.10.0 as BatBot
 WORKDIR /app/bot
 COPY ./ ./
 RUN npm install
