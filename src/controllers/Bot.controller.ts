@@ -133,15 +133,20 @@ export default class BotController {
     }
 
     public async setPresence(activities: ActivitiesOptions[] = []) {
-        await this._bot.user?.setPresence({
-            status: 'online',
-            activities: [
-                {
-                    name: `Prefix: ${this.config.prefix}`,
-                    type: 'WATCHING'
-                },
-                ...activities
-            ]
-        })
+        try {
+            await this._bot.user?.setPresence({
+                status: 'online',
+                activities: [
+                    {
+                        name: `Prefix: ${this.config.prefix}`,
+                        type: 'WATCHING'
+                    },
+                    ...activities
+                ]
+            })
+        } catch (e) {
+            this._logger.warn('Error Setting Presence')
+            this._logger.error('Error Occured', e)
+        }
     }
 }
