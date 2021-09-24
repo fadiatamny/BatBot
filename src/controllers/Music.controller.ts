@@ -54,9 +54,12 @@ export default class MusicController {
                 }
             ])
         })
-        this._player.on('trackAdd', (queue: Queue<any>, track: Track) =>
+        this._player.on('trackAdd', (queue: Queue<any>, track: Track) => {
+            if (this._addedInitialTrack) {
+                return // means its initial track and we dont need to notify we added it to a queue.
+            }
             queue.metadata.channel.send(`⏱ | **${track.title}** queued at index #${queue.tracks.length}`)
-        )
+        })
     }
 
     private async _playCommand(message: Message, content: string) {
