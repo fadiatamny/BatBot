@@ -1,4 +1,4 @@
-import { Client, Message, Intents } from 'discord.js'
+import { Client, Message, Intents, ActivitiesOptions } from 'discord.js'
 import { UserConfig } from '../services/UserConfig.service'
 import RatingController from './Rating.controller'
 import WatcherController from './Watcher.controller'
@@ -119,6 +119,7 @@ export default class BotController {
     private async _connect() {
         try {
             await this._bot.login(process.env.BOT_TOKEN)
+            await this.setPresence()
         } catch (e) {
             if (this._reconnectAttemptsCount < BotController._maxReconnectAttempt) {
                 this._logger.log(`Attempting Reconnect #${this._reconnectAttemptsCount++ + 1}`)
@@ -129,5 +130,18 @@ export default class BotController {
                 this._logger.error('Error Occured', e)
             }
         }
+    }
+
+    public async setPresence(activities: ActivitiesOptions[] = []) {
+        await this._bot.user?.setPresence({
+            status: 'online',
+            activities: [
+                {
+                    name: `Prefix: ${this.config.prefix}`,
+                    type: 'WATCHING'
+                },
+                ...activities
+            ]
+        })
     }
 }
