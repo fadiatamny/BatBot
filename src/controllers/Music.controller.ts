@@ -41,18 +41,11 @@ export default class MusicController {
         this._workQueue = new WorkQueue()
         this._player = new Player(this._bot)
         this._logger = new Logger('MusicController')
-        this._player.on('trackStart', (queue: Queue<any>, track: Track) => {
-            this._addedInitialTrack = false
-            queue.metadata?.channel.send(
+        this._player.on('trackStart', async (queue: Queue<any>, track: Track) => {
+            await queue.metadata?.channel.send(
                 `🎶 | Now playing **${track.title}** - ${track.duration} \n📃 | [${track.url}]`
             )
-            BotController.instance.setPresence([
-                {
-                    name: `🎶 | Now playing **${track.title}** - ${track.duration}`,
-                    url: track.url,
-                    type: 'PLAYING'
-                }
-            ])
+            this._addedInitialTrack = false
         })
         this._player.on('trackAdd', (queue: Queue<any>, track: Track) => {
             if (this._addedInitialTrack) {

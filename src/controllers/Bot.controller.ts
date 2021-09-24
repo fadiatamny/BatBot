@@ -53,10 +53,14 @@ export default class BotController {
     public rating: RatingController | undefined
 
     constructor() {
+        this._logger = new Logger('BotController')
         this._reconnectAttemptsCount = 0
         const intents = [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES]
         this._bot = new Client({ intents })
-        this._logger = new Logger('BotController')
+        this._bot.on('error', (e: any) => {
+            this._logger.warn('Error occured in the bot client')
+            // this._logger.error(e)
+        })
         this._handlers = {
             [BotEvents.READY]: this._ready.bind(this),
             [BotEvents.MESSAGE]: this._message.bind(this)
