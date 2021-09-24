@@ -36,9 +36,9 @@ export default class BotController {
     private _bot: Client
     private _handlers: { [key: string]: (...args: any[]) => void }
 
-    public watcher: WatcherController
-    public rating: RatingController
     public config: UserConfig
+    public watcher: WatcherController | undefined
+    public rating: RatingController | undefined
 
     constructor(private _prefix: string = '!') {
         this._bot = new Client()
@@ -47,9 +47,13 @@ export default class BotController {
             [BotEvents.MESSAGE]: this._message.bind(this)
         }
 
-        this.watcher = new WatcherController(this._bot)
-        this.rating = new RatingController(this._bot)
         this.config = new UserConfig()
+        if (this.config.ipwatcher) {
+            this.watcher = new WatcherController(this._bot)
+        }
+        if (this.config.rating) {
+            this.rating = new RatingController(this._bot)
+        }
 
         this._addListeners()
         this._connect()
@@ -65,7 +69,7 @@ export default class BotController {
 
     private _ready() {
         console.log('The bot is connected !')
-        this.watcher.start()
+        this.watcher?.start()
     }
 
     private _cleanContentPrefix(content: string) {
@@ -77,16 +81,14 @@ export default class BotController {
     private _handleCommands(message: Message) {
         const content = message.content.substring(1)
         const service = content.split(' ')[0].toLocaleLowerCase()
+        const cleaned = this._cleanContentPrefix(content)
 
         switch (service) {
             case BotServices.WATCHER:
-                const cleaned = this._cleanContentPrefix(content)
-                this.watcher.handleCommands(cleaned, message)
+                this.watcher?.handleCommands(cleaned, message)
                 break
             case BotServices.RATING:
-                // content = this._cleanContentPrefix(content)
-                // this.rating.handleCommands(content, message)
-                // message that service is unavailable
+                this.rating?.handleCommands(cleaned, message)
                 break
             default:
                 // return message of service not available.

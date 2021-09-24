@@ -50,8 +50,8 @@ export default class WatcherController {
         }
     }
 
-    private async _isInCorrectChannel () {
-        const available = BotController.instance.config.ipwatcher
+    private async _isInCorrectChannel() {
+        const available = BotController.instance.config.ipwatcher!
         for (const c of available) {
             const guild = await this._bot.guilds.fetch(c.serverId)
             if (guild) {
@@ -68,7 +68,9 @@ export default class WatcherController {
 
     public async handleCommands(content: string, message: Message) {
         const isInCorrectChannel = await this._isInCorrectChannel()
-        if (!isInCorrectChannel) { return }
+        if (!isInCorrectChannel) {
+            return
+        }
         for (const command of enumKeys(WatcherCommands)) {
             const key = WatcherCommands[command]
             if (content.startsWith(key)) {
@@ -78,7 +80,7 @@ export default class WatcherController {
     }
 
     public async setPresenceMessage(ip: string) {
-        const available = BotController.instance.config.ipwatcher
+        const available = BotController.instance.config.ipwatcher!
         for (const c of available) {
             const guild = await this._bot.guilds.fetch(c.serverId)
             if (guild) {

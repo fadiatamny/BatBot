@@ -1,6 +1,5 @@
 import RatingService from '../services/Rating.service'
 import { Client, Message, MessageEmbed } from 'discord.js'
-import { enumKeys } from '../utils'
 import { DbRating, Rating, RatingCategories, RatingQuery } from '../models/rating.model'
 import { BotError } from '../models/BotError.model'
 import { Logger } from '../utils/Logger'
