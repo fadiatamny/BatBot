@@ -1,6 +1,6 @@
 import WatcherService from '../services/Watcher.service'
-import { Client, Message, TextChannel } from 'discord.js'
-import { enumKeys } from '../utils'
+import { Client, GuildChannel, Message, TextChannel, ThreadChannel } from 'discord.js'
+import { enumKeys, removeFirstWord } from '../utils'
 import BotController from './Bot.controller'
 import { Logger } from '../utils/Logger'
 
@@ -74,27 +74,36 @@ export default class WatcherController {
         if (!isInCorrectChannel) {
             return
         }
+        const { first } = removeFirstWord(content)
+
         for (const command of enumKeys(WatcherCommands)) {
             const key = WatcherCommands[command]
-            if (content.startsWith(key)) {
+            if (key === first) {
                 this._commands[key](message)
+                return
             }
         }
     }
 
     public async setPresenceMessage(ip: string) {
         const available = BotController.instance.config.ipwatcher!
-        for (const c of available) {
-            const guild = await this._bot.guilds.fetch(c.serverId)
-            if (guild) {
-                guild.channels.cache.map((channel) => {
-                    if (channel.name === c.channelName || c.channelName === '*') {
-                        if (channel.isText() && !channel.isThread()) {
-                            let textChannel = channel as TextChannel
-                            textChannel.setTopic(`The Ip is: ${ip}`)
+        for (const config of available) {
+            try {
+                const guild = await this._bot.guilds.fetch(config.serverId)
+                if (guild) {
+                    guild.channels.cache.map((channel: GuildChannel | ThreadChannel) => {
+                        if (!channel.isText()) {
+                            return
                         }
-                    }
-                })
+                        const textChannel: TextChannel = channel as unknown as TextChannel
+                        if (channel.name === config.channelName || config.channelName === '*') {
+                            textChannel.setTopic(`The Ip is: ${ip}`)
+                            this._logger.warn(`Bot set channel ${textChannel.name} of ${guild.name} to the ip`)
+                        }
+                    })
+                }
+            } catch (e) {
+                this._logger.warn(`Bot does not have access to the guild - ${config.serverId}`)
             }
         }
         this._ip = ip

@@ -3,8 +3,8 @@ import { UserConfig } from '../services/UserConfig.service'
 import RatingController from './Rating.controller'
 import WatcherController from './Watcher.controller'
 import MusicController from './Music.controller'
-import { throws } from 'assert'
 import { Logger } from '../utils/Logger'
+import { delay, removeFirstWord } from '../utils'
 
 enum BotServices {
     WATCHER = 'watcher',
@@ -18,7 +18,8 @@ enum BotEvents {
 }
 
 export default class BotController {
-    private static _instance: BotController | null
+    private static _maxReconnectAttempt = 5
+    private static _instance: BotController | null = null
     public static get instance() {
         if (!this._instance) {
             this._instance = new BotController()
@@ -27,18 +28,23 @@ export default class BotController {
         return this._instance
     }
 
-    public static specificInstance(prefix?: string) {
-        if (this._instance) {
-            this.instance._removeListeners()
-            this.instance._bot.destroy()
+    public static get hasInstance() {
+        return this._instance ? true : false
+    }
+
+    public static initInstance() {
+        if (this.hasInstance) {
+            this._instance!._removeListeners()
+            this._instance!._bot.destroy()
             this._instance = null
         }
 
-        this._instance = new BotController(prefix)
+        this._instance = new BotController(process.env.PREFIX)
     }
 
     private _bot: Client
     private _handlers: { [key: string]: (...args: any[]) => void }
+    private _reconnectAttemptsCount: number
     private _logger: Logger
 
     public config: UserConfig
@@ -47,9 +53,9 @@ export default class BotController {
     public rating: RatingController | undefined
 
     constructor(private _prefix: string = '!') {
-        this._bot = new Client({
-            intents: [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES]
-        })
+        this._reconnectAttemptsCount = 0
+        const intents = [Intents.FLAGS.GUILDS, Intents.FLAGS.GUILD_MESSAGES, Intents.FLAGS.GUILD_VOICE_STATES]
+        this._bot = new Client({ intents })
         this._logger = new Logger('BotController')
         this._handlers = {
             [BotEvents.READY]: this._ready.bind(this),
@@ -83,26 +89,19 @@ export default class BotController {
         this.watcher?.start()
     }
 
-    private _cleanContentPrefix(content: string) {
-        const split = content.split(' ')
-        split.shift()
-        return split.join(' ')
-    }
-
     private _handleCommands(message: Message) {
         const content = message.content.substring(1)
-        const service = content.split(' ')[0].toLocaleLowerCase()
-        const cleaned = this._cleanContentPrefix(content)
+        const { first, rest } = removeFirstWord(content)
 
-        switch (service) {
+        switch (first?.toLowerCase()) {
             case BotServices.WATCHER:
-                this.watcher?.handleCommands(cleaned, message)
+                this.watcher?.handleCommands(rest, message)
                 break
             case BotServices.RATING:
-                this.rating?.handleCommands(cleaned, message)
+                this.rating?.handleCommands(rest, message)
                 break
             case BotServices.MUSIC:
-                this.music.handleCommands(cleaned, message)
+                this.music.handleCommands(rest, message)
                 break
             default:
                 // return message of service not available.
@@ -111,14 +110,24 @@ export default class BotController {
     }
 
     private _message(message: Message) {
-        const content = message.content.toLowerCase()
-        if (content.startsWith(this._prefix)) {
+        if (message.content.startsWith(this._prefix)) {
             this._handleCommands(message)
             return
         }
     }
 
     private async _connect() {
-        await this._bot.login(process.env.BOT_TOKEN)
+        try {
+            await this._bot.login(process.env.BOT_TOKEN)
+        } catch (e) {
+            if (this._reconnectAttemptsCount < BotController._maxReconnectAttempt) {
+                this._logger.log(`Attempting Reconnect #${this._reconnectAttemptsCount++ + 1}`)
+                await delay(500)
+                this._connect()
+            } else {
+                this._logger.warn('Max Reconnect Attempts Reached!')
+                this._logger.error('Error Occured', e)
+            }
+        }
     }
 }

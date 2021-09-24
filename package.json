@@ -5,7 +5,9 @@
     "main": "index.js",
     "scripts": {
         "start": "NODE_ENV=production node ./build/index.js",
+        "start:windows": "SET NODE_ENV=production&& node ./build/index.js",
         "dev": "NODE_ENV=development ts-node ./src/index.ts",
+        "dev:windows": "SET NODE_ENV=development&& ts-node ./src/index.ts",
         "dev-watch": "ts-node-dev ./src/index.ts",
         "build": "tsc",
         "lint:format": "prettier --loglevel warn --write \"./**/*.{ts,md,json}\" ",
@@ -33,7 +35,7 @@
         "@discord-player/extractor": "^3.0.2",
         "@discordjs/opus": "^0.6.0",
         "discord-player": "^5.1.0",
-        "discord.js": "^12.5.3",
+        "discord.js": "^13.0.1",
         "dotenv": "^10.0.0",
         "ffmpeg": "^0.0.4",
         "lodash": "^4.17.21",

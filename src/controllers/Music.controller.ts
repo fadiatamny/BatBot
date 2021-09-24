@@ -1,8 +1,10 @@
-import { Client, Guild, Message } from 'discord.js'
+import { Client, Message, MessageEmbed, Role } from 'discord.js'
 import { Logger } from '../utils/Logger'
-import { enumKeys } from '../utils'
+import { enumKeys, removeFirstWord } from '../utils'
 import { Player, Track } from 'discord-player'
 import { QueryType } from 'discord-player'
+import { BotError } from '../models/BotError.model'
+import BotController from './Bot.controller'
 
 enum MusicCommands {
     PLAY = 'add',
@@ -29,7 +31,7 @@ export default class MusicController {
             [MusicCommands.CLEAR]: this._stopCommand.bind(this),
             [MusicCommands.REMOVE]: this._removeCommand.bind(this)
         }
-        console.log(_bot)
+
         this._player = new Player(this._bot)
         this._logger = new Logger('MusicController')
         this._player.on('trackStart', (queue: any, track: Track) =>
@@ -40,21 +42,23 @@ export default class MusicController {
         )
     }
 
-    private async _playCommand(content: string, message: Message) {
+    private async _playCommand(message: Message, content: string) {
         try {
-            this._logger.log('_playCommand')
-            if (!message.member?.voice.channel)
-                return message.reply('You need to be in a voice channel to queue music!')
+            if (!message.member?.voice.channel) {
+                message.reply('You need to be in a voice channel to queue music!')
+                return
+            }
 
             if (
                 message.guild!.me &&
                 message.guild!.me.voice.channel &&
                 message.member!.voice.channel !== message.guild!.me.voice.channel
             ) {
-                return message.reply(`I'm already occupied in another voice channel!`)
+                message.reply(`I'm already occupied in another voice channel!`)
+                return
             }
 
-            const guild = this._bot.guilds.cache.get(message.guildId!)
+            const guild = this._bot.guilds.cache.get(message.guild!.id!)
             const voiceChannel = message.member!.voice.channel
 
             const searchResult = await this._player.search(content, {
@@ -62,7 +66,10 @@ export default class MusicController {
                 searchEngine: QueryType.AUTO
             })
 
-            if (!searchResult || !searchResult.tracks.length) return message.reply('No results were found!')
+            if (!searchResult || !searchResult.tracks.length) {
+                message.reply('No results were found!')
+                return
+            }
 
             const musicQueue = await this._player.createQueue(guild!, {
                 metadata: {
@@ -71,115 +78,149 @@ export default class MusicController {
             })
 
             try {
-                if (!musicQueue.connection) await musicQueue.connect(voiceChannel)
-            } catch {
+                if (!musicQueue.connection) {
+                    await musicQueue.connect(voiceChannel)
+                }
+            } catch (e: any) {
                 this._player.deleteQueue(message.guild!.id)
                 message.reply('Could not join your voice channel!')
-                return void this._logger.error('could not join voiceChannel: ' + voiceChannel)
+                this._logger.log('could not join voiceChannel: ' + voiceChannel)
+                this._logger.error(e)
+                return
             }
 
-            this._logger.log('addTracks')
             await message.reply(`⏱ | Loading your ${searchResult.playlist ? 'playlist' : 'track'}...`)
-            ;(await searchResult.playlist)
-                ? musicQueue.addTracks(searchResult.tracks)
-                : musicQueue.addTrack(searchResult.tracks[0])
+            const playlist = await searchResult.playlist
+            if (playlist) {
+                musicQueue.addTracks(searchResult.tracks)
+            } else {
+                musicQueue.addTrack(searchResult.tracks[0])
+            }
 
-            this._logger.log('play')
-            if (!musicQueue.playing) await musicQueue.play()
+            if (!musicQueue.playing) {
+                await musicQueue.play()
+            }
         } catch (e: any) {
-            this._logger.log('There was an error with _playCommand')
+            this._logger.log('There was an error with playCommand')
             this._logger.error(e)
         }
     }
 
-    private async _skipCommand(content: string, message: Message) {
+    private async _skipCommand(message: Message) {
         try {
             const musicQueue = this._player.getQueue(message.guildId!)
-            if (!musicQueue || !musicQueue.playing) return void message.reply('❌ | No music is being played!')
+            if (!musicQueue || !musicQueue.playing) {
+                message.reply('❌ | No music is being played!')
+                return
+            }
             const track = musicQueue.current
-            return void message.reply(musicQueue.skip() ? `✅ | Skipped **${track}**!` : '❌ | Something went wrong!')
+            message.reply(musicQueue.skip() ? `✅ | Skipped **${track}**!` : '❌ | Something went wrong!')
         } catch (e: any) {
-            this._logger.log('There was an error with _skipCommand')
+            this._logger.log('There was an error with skipCommand')
             this._logger.error(e)
         }
     }
 
-    private async _stopCommand(content: string, message: Message) {
+    private async _stopCommand(message: Message) {
         try {
             const musicQueue = this._player.getQueue(message.guildId!)
-            if (!musicQueue || !musicQueue.playing) return void message.reply('❌ | No music is being played!')
+            if (!musicQueue || !musicQueue.playing) {
+                message.reply('❌ | No music is being played!')
+                return
+            }
             musicQueue.destroy()
-            return void message.reply('🛑 | bye-bye!')
+            message.reply('🛑 | bye-bye!')
         } catch (e: any) {
-            this._logger.log('There was an error with _stopCommand')
+            this._logger.log('There was an error with stopCommand')
             this._logger.error(e)
         }
     }
 
-    private async _queue(content: string, message: Message) {
+    private async _queue(message: Message) {
         try {
             const musicQueue = this._player.getQueue(message.guildId!)
-
-            if (!musicQueue || !musicQueue.tracks || !musicQueue.tracks.length)
-                return void message.reply('❌ | queue is empty!')
+            if (!musicQueue || !musicQueue.tracks || !musicQueue.tracks.length) {
+                message.reply('❌ | queue is empty!')
+                return
+            }
 
             const currentTrack = musicQueue.current
             const tracks = musicQueue.tracks.map((track: Track, index: number) => {
                 return `${index + 1}. **${track.title}** - ${track.duration} [${track.url}]`
             })
 
-            return void message.reply({
-                embeds: [
-                    {
-                        title: 'Music Queue',
-                        description: `${tracks.join('\n')}`,
-                        color: 0x00ff00,
-                        fields: [
-                            {
-                                name: 'Now Playing',
-                                value: `🎶 | Now playing **${currentTrack.title}** - ${currentTrack.duration} [${currentTrack.url}]`
-                            }
-                        ]
-                    }
-                ]
-            })
+            const embed = new MessageEmbed()
+            embed.title = 'Music Queue'
+            embed.description = `${tracks.join('\n')}`
+            embed.fields = [
+                {
+                    name: 'Now Playing',
+                    value: `🎶 | Now playing **${currentTrack.title}** - ${currentTrack.duration} [${currentTrack.url}]`,
+                    inline: false
+                }
+            ]
+
+            message.reply({ embeds: [embed] })
         } catch (e: any) {
-            this._logger.log('There was an error with _queue')
+            this._logger.log('There was an error with queue')
             this._logger.error(e)
         }
     }
 
-    private async _removeCommand(content: string, message: Message) {
+    private async _removeCommand(message: Message, content: string) {
         try {
             const musicQueue = this._player.getQueue(message.guildId!)
-            if (!musicQueue || !musicQueue.tracks || !musicQueue.tracks.length)
-                return void message.reply('❌ | queue is empty!')
+            if (!musicQueue || !musicQueue.tracks || !musicQueue.tracks.length) {
+                message.reply('❌ | queue is empty!')
+                return
+            }
 
             const index = parseInt(content.split(' ')[0]) - 1
-            if (index >= musicQueue.tracks.length)
-                return void message.reply('❌ | no such index number exists! use `!queue` to display current queue')
+            if (index >= musicQueue.tracks.length) {
+                message.reply('❌ | no such index number exists! use `!queue` to display current queue')
+                return
+            }
             message.reply(`✅ | Removed **${musicQueue.tracks[index].title}**`)
             musicQueue.remove(index)
         } catch (e: any) {
-            this._logger.log('There was an error with _removeCommand')
+            this._logger.log('There was an error with removeCommand')
             this._logger.error(e)
         }
+    }
+
+    private _validCommand(message: Message) {
+        if (!message || !message.guild || !message.member) {
+            return false
+        }
+
+        const djRole = BotController.instance.config.music.djRole
+        const roleExists = message.member.roles.cache.find((r: Role) => r.name === djRole)
+        if (djRole !== '*' && !roleExists) {
+            return false
+        }
+
+        return true
     }
 
     public handleCommands(content: string, message: Message) {
         try {
-            this._logger.log('handleCommand')
-            if (!message || !message.guild || !message.member) {
-                return
+            if (!this._validCommand(message)) {
+                throw new BotError('invalid command occured: missing key properties', {
+                    message,
+                    guild: message.guild,
+                    member: message.member
+                })
             }
-            if (!content || !content.length) return void this._queue(content, message)
+            const { first, rest } = removeFirstWord(content)
             for (const command of enumKeys(MusicCommands)) {
                 const key = MusicCommands[command]
-                if (content.startsWith(key)) {
-                    content = content.substr(content.indexOf(' ') + 1)
-                    return void this._commands[key](content, message)
+                if (first === key) {
+                    this._commands[key](message, rest)
+                    return
                 }
             }
+
+            this._queue(message)
         } catch (e: any) {
             message.reply('Something has gone terribly wrong! 😵‍💫')
             this._logger.log('There was an error with handleCommands')
