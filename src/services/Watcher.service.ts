@@ -12,31 +12,34 @@ export default class WatcherService {
         this._logger = new Logger('WatcherService')
     }
 
+    private _handlePolling(resolve: (value: string | PromiseLike<string>) => void, reject: (reason?: any) => void) {
+        this._logger.log('started Polling')
+        const options = {
+            host: 'ipv4bot.whatismyipaddress.com',
+            port: 80,
+            path: '/'
+        }
+        try {
+            http.get(options, function (res) {
+                res.on('data', function (chunk) {
+                    const ip = chunk.toString()
+                    BotController.instance?.watcher?.setPresenceMessage(ip)
+                    resolve(ip)
+                })
+            }).on('error', function (e) {
+                reject(e.message)
+            })
+        } catch (e: any) {
+            reject(e.message)
+        } finally {
+            this._logger.log('finished Polling')
+        }
+    }
+
     private _poll() {
         try {
-            return new Promise<string>((resolve, reject) => {
-                this._logger.log('started Polling')
-                const options = {
-                    host: 'ipv4bot.whatismyipaddress.com',
-                    port: 80,
-                    path: '/'
-                }
-                try {
-                    http.get(options, function (res) {
-                        res.on('data', function (chunk) {
-                            const ip = chunk.toString()
-                            BotController.instance?.watcher?.setPresenceMessage(ip)
-                            resolve(ip)
-                        })
-                    }).on('error', function (e) {
-                        reject(e.message)
-                    })
-                } catch (e: any) {
-                    reject(e.message)
-                } finally {
-                    this._logger.log('finished Polling')
-                }
-            })
+            const bound = this._handlePolling.bind(this)
+            return new Promise<string>(bound)
         } catch (e) {
             this._logger.warn('Error occured in watcher service')
             // this._logger.error(e)
