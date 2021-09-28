@@ -1,4 +1,4 @@
-import { Client, Message, MessageEmbed, Role } from 'discord.js'
+import { Client, Message, MessageEmbed, Options, Role } from 'discord.js'
 import { Logger } from '../utils/Logger'
 import { WorkQueue } from '../utils/WorkQueue'
 import { enumKeys, removeFirstWord } from '../utils'
@@ -51,68 +51,106 @@ export default class MusicController {
         this._logger = new Logger('MusicController')
 
         this._player.on('playlistAdd', (queue: Queue, playlist: Playlist) => {
-            this._logger.log('playlistAdd event')
-            const embedded = new MessageEmbed()
-            .setColor('#00ff00')
-            .setTitle('Added playlist to the queue')
-            .setAuthor(playlist.name)
-            .setDescription(`Number of songs in the playlist: ${playlist.songs.length}`)
+            // const embedded = new MessageEmbed()
+            //     .setColor('#00ff00')
+            //     .setTitle(playlist.name)
+            //     .setAuthor('Added Playlist')
+            //     .setDescription(`**${playlist.songs.length}** songs have been added to the queue.`)
 
-            queue.data.channel.send({embeds: [embedded]})
+            playlist.songs[0].data.message.reply({ embeds: [{
+                color: '#00ff00',
+                title: playlist.toString(),
+                author: {
+                    name: 'Playlist added to queue',
+                    icon_url: '',
+                    url: playlist.url,
+                },
+                fields: [
+                    {
+                        name: 'Position in queue',
+                        value: playlist.songs[0].data.index,
+                        inline: true,
+                    },
+                    {
+                        name: 'Enqueued',
+                        value: playlist.songs.length,
+                        inline: true,
+                    },
+                ]
+            }] })
         })
-        .on('songAdd', (queue: Queue, track: Song) => {
-            if (this._addedInitialTrack) {
-                return // means its initial track and we dont need to notify we added it to a queue.
-            }
-            this._logger.log("songAdd event")
-            const embedded = new MessageEmbed()
-                .setColor('#00ff00')
-                .setTitle('Added to the queue')
-                .setURL(track.url)
-                .setAuthor(track.name, track.thumbnail, track.url)
-                .setDescription(`Index in queue: **${queue.songs.length}**\n
-                                Song's length: **${track.duration}**\n
-                                Requested by: **${track.requestedBy?.username ?? 'unknown'}**`)
-                .setThumbnail(track.thumbnail)
+            .on('songAdd', (queue: Queue, song: Song) => {
+                if (this._addedInitialTrack) {
+                    return // means its initial track and we dont need to notify we added it to a queue.
+                }
+                const embedded = this._songEmbedded(queue, song, true)
+                    // .setColor('#00ff00')
+                    // .setTitle(song.toString())
+                    // .setURL(song.url)
+                    // .setAuthor('Added to queue', song.requestedBy?.avatarURL() ?? undefined, song.url)
+                    // .setDescription(`Index in queue: **${queue.songs.length}**\n
+                    //             Song's length: **${song.duration}**\n
+                    //             Requested by: **${song.requestedBy?.username ?? 'unknown'}**`)
+                    // .setThumbnail(song.thumbnail)
 
-            // queue.data.channel.send({ embeds: [embedded] })
-            track.data.message.reply({ embeds: [embedded] })
-        })
-            .on('songFirst', async (queue: Queue, track: Song) => {
-                const embedded = new MessageEmbed()
-                .setColor('#0099ff')
-                .setTitle('Started Playing')
-                .setURL(track.url)
-                .setAuthor(track.name, track.thumbnail, track.url)
-                .setDescription(`Song's length: **${track.duration}**\n
-                Requested by: **${track.requestedBy?.username ?? 'unknown'}**`)
-                .setThumbnail(track.thumbnail)
+                song.data.message.reply({ embeds: [embedded] })
+            })
+            .on('songFirst', async (queue: Queue, song: Song) => {
+                const embedded = this._songEmbedded(queue, song)
+                    .setColor('#0099ff')
+                    .setAuthor('Started Playing')
+                //     .setTitle('Started Playing')
+                //     .setURL(song.url)
+                //     .setAuthor(song.name, song.thumbnail, song.url)
+                //     .setDescription(`Song's length: **${song.duration}**\n
+                // Requested by: **${song.requestedBy?.username ?? 'unknown'}**`)
+                //     .setThumbnail(song.thumbnail)
                 await queue.data.channel.send({ embeds: [embedded] })
                 this._addedInitialTrack = false
             })
             .on('songChanged', (queue: Queue, newSong: Song, oldSong: Song) => {
-                const embedded = new MessageEmbed()
+                const embedded = this._songEmbedded(queue, newSong)
                     .setColor('#0099ff')
-                    .setTitle('Now Playing')
-                    .setURL(newSong.url)
-                    .setAuthor(newSong.name, newSong.thumbnail, newSong.url)
-                    .setDescription(`Song's length: **${newSong.duration}**\n
-                                Requested by: **${newSong.requestedBy?.username ?? 'unknown'}**`)
-                    .setThumbnail(newSong.thumbnail)
+                    .setAuthor('Now Playing')
+                    // .setURL(newSong.url)
+                    // .setAuthor(newSong.name, newSong.thumbnail, newSong.url)
+                    // .setDescription(`Song's length: **${newSong.duration}**\n
+                    //             Requested by: **${newSong.requestedBy?.username ?? 'unknown'}**`)
+                    // .setThumbnail(newSong.thumbnail)
                 queue.data.channel.send({ embeds: [embedded] })
             })
             .on('queueEnd', (queue: Queue) => {
                 const embedded = new MessageEmbed()
-                .setColor('#ff0000')
-                .setTitle('Queue Ended')
-                .setDescription('The queue has ended.')
-                queue.data.channel.send({embeds: [embedded]})
+                    .setColor('#ff0000')
+                    .setTitle('Queue Ended')
+                    .setDescription('The queue has ended.')
+                queue.data.channel.send({ embeds: [embedded] })
             })
             .on('error', (e: any) => {
                 this._logger.warn('error occured with the discord-music-player instance')
                 this._logger.error(e)
             })
     }
+
+    private _songEmbedded(queue: Queue, song: Song, queued = false) {
+        const embedded = new MessageEmbed()
+            .setColor('#00ff00')
+            .setTitle(song.name)
+            .setURL(song.url)
+            .setAuthor('Added to queue', song.requestedBy?.avatarURL() ?? undefined, song.url)
+            .addFields(
+                {name: 'Channel', value: song.author, inline: true},
+                {name: 'Song Duration', value: song.duration, inline: true},
+            )
+            .setThumbnail(song.thumbnail)
+        if(queued) {
+            embedded.addFields(
+                {name: 'Position in queue', value: song.data.index, inline: false},
+            )
+        }
+        return embedded
+    }
+
     private async _playlistCommand(message: Message, content: string) {
         this._playCommand(message, content, true)
     }
@@ -132,20 +170,29 @@ export default class MusicController {
             }
 
             const guildQueue = this._player.getQueue(message.guild!.id)
-
+            
             let queue = this._player.createQueue(message.guild!.id,
                 {
                     data: {
                         channel: message.channel,
                     }
                 })
+
+            const index = queue.songs.length
+            
             if (!(queue.isPlaying || queue.songs.length)) {
                 this._addedInitialTrack = true
             }
             await queue.join(message.member!.voice.channel!)
-            this._logger.log(isPlaylist)
+            message.reply('🎵 Searching 🔎 `'+content+'`')
             if (!isPlaylist) {
-                let song = await queue.play(content).catch(_ => {
+                let song = await queue.play(content, {
+                    requestedBy: message.member.user,
+                    data: {
+                        message: message,
+                        index: index,
+                    }
+                }).catch(_ => {
                     if (!guildQueue)
                         queue.stop()
                 })
@@ -153,11 +200,6 @@ export default class MusicController {
                     message.reply(`❌ | your song couldn't be found, if it's a playlist try 'addPlaylist' instead of 'add'`)
                     return
                 }
-
-                song.requestedBy = message.member.user
-                song.setData({
-                    message: message,
-                })
             }
             else {
                 let playlist = await queue.playlist(content).catch(_ => {
@@ -170,6 +212,10 @@ export default class MusicController {
                 if (!this._addedInitialTrack) {
                     this._addedInitialTrack = true
                 }
+                playlist!.songs[0].setData({
+                    message: message,
+                    index: index,
+                })
                 // playlist!.queue.songs.forEach()
                 // playlist.requestedBy = message.member.user
                 // playlist.setData({
@@ -253,7 +299,7 @@ export default class MusicController {
                 message.reply('❌ | No music is being played!')
                 return
             }
-            
+
             const embedded = new MessageEmbed()
                 .setColor('#0099ff')
                 .setTitle('Currently Playing')
@@ -294,8 +340,8 @@ export default class MusicController {
                 message.reply('❌ | No music is being played!')
                 return
             }
-            let track = guildQueue?.skip()
-            message.reply(track ? `✅ | Skipped **${track}**!` : '❌ | Something went wrong!')
+            let song = guildQueue?.skip()
+            message.reply(song ? `✅ | Skipped **${song}**!` : '❌ | Something went wrong!')
             //         const musicQueue = this._player.getQueue(message.guildId!)
             //         if (!musicQueue || !musicQueue.playing) {
             //             message.reply('❌ | No music is being played!')
@@ -402,7 +448,7 @@ export default class MusicController {
             const { first, rest } = removeFirstWord(content)
             for (const command of enumKeys(MusicCommands)) {
                 const key = MusicCommands[command]
-                if (first === key) {
+                if (first?.toLowerCase() === key) {
                     if (key === MusicCommands.PLAYING) {
                         this._commands[key](message, rest)
                     } else {
