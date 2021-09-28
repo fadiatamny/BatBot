@@ -62,7 +62,7 @@ export default class MusicController {
                 title: playlist.toString(),
                 author: {
                     name: 'Playlist added to queue',
-                    icon_url: '',
+                    icon_url: playlist.songs[0].data.message.member.user.avatarURL(),
                     url: playlist.url,
                 },
                 fields: [
@@ -83,40 +83,23 @@ export default class MusicController {
                 if (this._addedInitialTrack) {
                     return // means its initial track and we dont need to notify we added it to a queue.
                 }
-                const embedded = this._songEmbedded(queue, song, true)
+                const embedded = this._songEmbedded(queue, song, 'Added to queue', true)
                     // .setColor('#00ff00')
-                    // .setTitle(song.toString())
-                    // .setURL(song.url)
-                    // .setAuthor('Added to queue', song.requestedBy?.avatarURL() ?? undefined, song.url)
-                    // .setDescription(`Index in queue: **${queue.songs.length}**\n
-                    //             Song's length: **${song.duration}**\n
-                    //             Requested by: **${song.requestedBy?.username ?? 'unknown'}**`)
-                    // .setThumbnail(song.thumbnail)
 
                 song.data.message.reply({ embeds: [embedded] })
             })
-            .on('songFirst', async (queue: Queue, song: Song) => {
-                const embedded = this._songEmbedded(queue, song)
+            .on('songFirst', (queue: Queue, song: Song) => {
+                const embedded = this._songEmbedded(queue, song, 'Started Playing')
                     .setColor('#0099ff')
-                    .setAuthor('Started Playing')
-                //     .setTitle('Started Playing')
-                //     .setURL(song.url)
-                //     .setAuthor(song.name, song.thumbnail, song.url)
-                //     .setDescription(`Song's length: **${song.duration}**\n
-                // Requested by: **${song.requestedBy?.username ?? 'unknown'}**`)
-                //     .setThumbnail(song.thumbnail)
-                await queue.data.channel.send({ embeds: [embedded] })
+
                 this._addedInitialTrack = false
+                queue.data.channel.send({ embeds: [embedded] })
+                //await
             })
             .on('songChanged', (queue: Queue, newSong: Song, oldSong: Song) => {
-                const embedded = this._songEmbedded(queue, newSong)
+                const embedded = this._songEmbedded(queue, newSong, 'Now Playing')
                     .setColor('#0099ff')
-                    .setAuthor('Now Playing')
-                    // .setURL(newSong.url)
-                    // .setAuthor(newSong.name, newSong.thumbnail, newSong.url)
-                    // .setDescription(`Song's length: **${newSong.duration}**\n
-                    //             Requested by: **${newSong.requestedBy?.username ?? 'unknown'}**`)
-                    // .setThumbnail(newSong.thumbnail)
+
                 queue.data.channel.send({ embeds: [embedded] })
             })
             .on('queueEnd', (queue: Queue) => {
@@ -132,12 +115,12 @@ export default class MusicController {
             })
     }
 
-    private _songEmbedded(queue: Queue, song: Song, queued = false) {
+    private _songEmbedded(queue: Queue, song: Song, name: string, queued = false) {
         const embedded = new MessageEmbed()
             .setColor('#00ff00')
             .setTitle(song.name)
             .setURL(song.url)
-            .setAuthor('Added to queue', song.requestedBy?.avatarURL() ?? undefined, song.url)
+            .setAuthor(name , song.requestedBy?.avatarURL() ?? undefined, song.url)
             .addFields(
                 {name: 'Channel', value: song.author, inline: true},
                 {name: 'Song Duration', value: song.duration, inline: true},
@@ -216,6 +199,7 @@ export default class MusicController {
                     message: message,
                     index: index,
                 })
+                playlist!.songs[0].requestedBy = message.member.user
                 // playlist!.queue.songs.forEach()
                 // playlist.requestedBy = message.member.user
                 // playlist.setData({
