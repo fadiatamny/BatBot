@@ -2,13 +2,16 @@ import { Client, Message, MessageEmbed, Role } from 'discord.js'
 import { Logger } from '../utils/Logger'
 import { WorkQueue } from '../utils/WorkQueue'
 import { enumKeys, removeFirstWord } from '../utils'
-import { Player, Queue, Track } from 'discord-player'
-import { QueryType } from 'discord-player'
+// import { Player, Queue, Track } from 'discord-player'
+// import { QueryType } from 'discord-player'
 import { BotError } from '../models/BotError.model'
 import BotController from './Bot.controller'
+import { Player, Playlist, Queue, Song } from 'discord-music-player'
 
 enum MusicCommands {
+    HELP = 'help',
     PLAY = 'add',
+    PLAYLIST = 'addPlaylist',
     PLAYING = 'playing',
     SKIP = 'skip',
     STOP = 'stop',
@@ -28,6 +31,7 @@ export default class MusicController {
     constructor(private _bot: Client) {
         this._commands = {
             [MusicCommands.PLAY]: this._playCommand.bind(this),
+            [MusicCommands.PLAYLIST]: this._playlistCommand.bind(this),
             [MusicCommands.PLAYING]: this._playingCommand.bind(this),
             [MusicCommands.SKIP]: this._skipCommand.bind(this),
             [MusicCommands.DISCONNECT]: this._stopCommand.bind(this),
@@ -39,33 +43,85 @@ export default class MusicController {
         this._addedInitialTrack = false
 
         this._workQueue = new WorkQueue()
-        this._player = new Player(this._bot)
-        this._logger = new Logger('MusicController')
-        this._player.on('trackStart', async (queue: Queue<any>, track: Track) => {
-            await queue.metadata?.channel.send(
-                `🎶 | Now playing **${track.title}** - ${track.duration} \n📃 | [${track.url}]`
-            )
-            this._addedInitialTrack = false
+        this._player = new Player(this._bot, {
+            leaveOnEmpty: false,
+            leaveOnStop: false,
+            leaveOnEnd: false,
         })
-        this._player.on('trackAdd', (queue: Queue<any>, track: Track) => {
+        this._logger = new Logger('MusicController')
+
+        this._player.on('playlistAdd', (queue: Queue, playlist: Playlist) => {
+            this._logger.log('playlistAdd event')
+            const embedded = new MessageEmbed()
+            .setColor('#00ff00')
+            .setTitle('Added playlist to the queue')
+            .setAuthor(playlist.name)
+            .setDescription(`Number of songs in the playlist: ${playlist.songs.length}`)
+
+            queue.data.channel.send({embeds: [embedded]})
+        })
+        .on('songAdd', (queue: Queue, track: Song) => {
             if (this._addedInitialTrack) {
                 return // means its initial track and we dont need to notify we added it to a queue.
             }
-            queue.metadata.channel.send(`⏱ | **${track.title}** queued at index #${queue.tracks.length}`)
-        })
-        this._player.on('error', (e: any) => {
-            this._logger.warn('error occured with the discord-player instance')
-            // this._logger.error(e)
-        })
-    }
+            this._logger.log("songAdd event")
+            const embedded = new MessageEmbed()
+                .setColor('#00ff00')
+                .setTitle('Added to the queue')
+                .setURL(track.url)
+                .setAuthor(track.name, track.thumbnail, track.url)
+                .setDescription(`Index in queue: **${queue.songs.length}**\n
+                                Song's length: **${track.duration}**\n
+                                Requested by: **${track.requestedBy?.username ?? 'unknown'}**`)
+                .setThumbnail(track.thumbnail)
 
-    private async _playCommand(message: Message, content: string) {
+            // queue.data.channel.send({ embeds: [embedded] })
+            track.data.message.reply({ embeds: [embedded] })
+        })
+            .on('songFirst', async (queue: Queue, track: Song) => {
+                const embedded = new MessageEmbed()
+                .setColor('#0099ff')
+                .setTitle('Started Playing')
+                .setURL(track.url)
+                .setAuthor(track.name, track.thumbnail, track.url)
+                .setDescription(`Song's length: **${track.duration}**\n
+                Requested by: **${track.requestedBy?.username ?? 'unknown'}**`)
+                .setThumbnail(track.thumbnail)
+                await queue.data.channel.send({ embeds: [embedded] })
+                this._addedInitialTrack = false
+            })
+            .on('songChanged', (queue: Queue, newSong: Song, oldSong: Song) => {
+                const embedded = new MessageEmbed()
+                    .setColor('#0099ff')
+                    .setTitle('Now Playing')
+                    .setURL(newSong.url)
+                    .setAuthor(newSong.name, newSong.thumbnail, newSong.url)
+                    .setDescription(`Song's length: **${newSong.duration}**\n
+                                Requested by: **${newSong.requestedBy?.username ?? 'unknown'}**`)
+                    .setThumbnail(newSong.thumbnail)
+                queue.data.channel.send({ embeds: [embedded] })
+            })
+            .on('queueEnd', (queue: Queue) => {
+                const embedded = new MessageEmbed()
+                .setColor('#ff0000')
+                .setTitle('Queue Ended')
+                .setDescription('The queue has ended.')
+                queue.data.channel.send({embeds: [embedded]})
+            })
+            .on('error', (e: any) => {
+                this._logger.warn('error occured with the discord-music-player instance')
+                this._logger.error(e)
+            })
+    }
+    private async _playlistCommand(message: Message, content: string) {
+        this._playCommand(message, content, true)
+    }
+    private async _playCommand(message: Message, content: string, isPlaylist = false) {
         try {
             if (!message.member?.voice.channel) {
                 message.reply('You need to be in a voice channel to queue music!')
                 return
             }
-
             if (
                 message.guild!.me &&
                 message.guild!.me.voice.channel &&
@@ -75,76 +131,156 @@ export default class MusicController {
                 return
             }
 
-            const guild = this._bot.guilds.cache.get(message.guild!.id!)
-            const voiceChannel = message.member!.voice.channel
+            const guildQueue = this._player.getQueue(message.guild!.id)
 
-            const searchResult = await this._player.search(content, {
-                requestedBy: message.member.nickname!,
-                searchEngine: QueryType.AUTO
-            })
-
-            if (!searchResult || !searchResult.tracks.length) {
-                message.reply('No results were found!')
-                return
-            }
-
-            const musicQueue = await this._player.createQueue(guild!, {
-                metadata: {
-                    channel: message.channel
-                }
-            })
-
-            try {
-                if (!musicQueue.connection) {
-                    await musicQueue.connect(voiceChannel)
-                }
-            } catch (e: any) {
-                this._player.deleteQueue(message.guild!.id)
-                message.reply('Could not join your voice channel!')
-                this._logger.warn('could not join voiceChannel: ' + voiceChannel)
-                // this._logger.error(e)
-                return
-            }
-
-            if (!musicQueue.playing && !this._addedInitialTrack) {
+            let queue = this._player.createQueue(message.guild!.id,
+                {
+                    data: {
+                        channel: message.channel,
+                    }
+                })
+            if (!(queue.isPlaying || queue.songs.length)) {
                 this._addedInitialTrack = true
             }
+            await queue.join(message.member!.voice.channel!)
+            this._logger.log(isPlaylist)
+            if (!isPlaylist) {
+                let song = await queue.play(content).catch(_ => {
+                    if (!guildQueue)
+                        queue.stop()
+                })
+                if (!song) {
+                    message.reply(`❌ | your song couldn't be found, if it's a playlist try 'addPlaylist' instead of 'add'`)
+                    return
+                }
 
-            await message.reply(`⏱ | Loading your ${searchResult.playlist ? 'playlist' : 'track'}...`)
-            const playlist = await searchResult.playlist
-            if (playlist) {
-                musicQueue.addTracks(searchResult.tracks)
-            } else {
-                musicQueue.addTrack(searchResult.tracks[0])
+                song.requestedBy = message.member.user
+                song.setData({
+                    message: message,
+                })
             }
-
-            if (this._addedInitialTrack) {
-                await musicQueue.play()
+            else {
+                let playlist = await queue.playlist(content).catch(_ => {
+                    if (!guildQueue)
+                        queue.stop();
+                })
+                if (!playlist) {
+                    message.reply(`❌ | your playlist couldn't be found, if it's a song try 'add' instead of 'addPlaylist'`)
+                }
+                if (!this._addedInitialTrack) {
+                    this._addedInitialTrack = true
+                }
+                // playlist!.queue.songs.forEach()
+                // playlist.requestedBy = message.member.user
+                // playlist.setData({
+                //     message: message,
+                // })
             }
         } catch (e: any) {
-            this._logger.warn('There was an error with playCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
+        //     try {
+        //         if (!message.member?.voice.channel) {
+        //             message.reply('You need to be in a voice channel to queue music!')
+        //             return
+        //         }
+
+        //         if (
+        //             message.guild!.me &&
+        //             message.guild!.me.voice.channel &&
+        //             message.member!.voice.channel !== message.guild!.me.voice.channel
+        //         ) {
+        //             message.reply(`I'm already occupied in another voice channel!`)
+        //             return
+        //         }
+
+        //         const guild = this._bot.guilds.cache.get(message.guild!.id!)
+        //         const voiceChannel = message.member!.voice.channel
+
+        //         const searchResult = await this._player.search(content, {
+        //             requestedBy: message.member.nickname!,
+        //             searchEngine: QueryType.AUTO
+        //         })
+
+        //         if (!searchResult || !searchResult.tracks.length) {
+        //             message.reply('No results were found!')
+        //             return
+        //         }
+
+        //         const musicQueue = await this._player.createQueue(guild!, {
+        //             metadata: {
+        //                 channel: message.channel
+        //             }
+        //         })
+
+        //         try {
+        //             if (!musicQueue.connection) {
+        //                 await musicQueue.connect(voiceChannel)
+        //             }
+        //         } catch (e: any) {
+        //             this._player.deleteQueue(message.guild!.id)
+        //             message.reply('Could not join your voice channel!')
+        //             this._logger.warn('could not join voiceChannel: ' + voiceChannel)
+        //             // this._logger.error(e)
+        //             return
+        //         }
+
+        //         if (!musicQueue.playing && !this._addedInitialTrack) {
+        //             this._addedInitialTrack = true
+        //         }
+
+        //         await message.reply(`⏱ | Loading your ${searchResult.playlist ? 'playlist' : 'track'}...`)
+        //         const playlist = await searchResult.playlist
+        //         if (playlist) {
+        //             musicQueue.addTracks(searchResult.tracks)
+        //         } else {
+        //             musicQueue.addTrack(searchResult.tracks[0])
+        //         }
+
+        //         if (this._addedInitialTrack) {
+        //             await musicQueue.play()
+        //         }
+        //     } catch (e: any) {
+        //         this._logger.warn('There was an error with playCommand')
+        //         // this._logger.error(e)
+        //     }
     }
 
     private async _playingCommand(message: Message) {
         try {
-            const guild = this._bot.guilds.cache.get(message.guild!.id!)
-            const musicQueue = await this._player.createQueue(guild!, {
-                metadata: {
-                    channel: message.channel
-                }
-            })
-
-            if (musicQueue && musicQueue.playing) {
-                const track = await musicQueue.nowPlaying()
-                const time = await musicQueue.getPlayerTimestamp()
-                message.reply(
-                    `🎶 | Currently Playing ${track.title}\n⏱ | ${time.current}/${time.end}\n📃 | ${track.url}`
-                )
-            } else {
+            const guildQueue = this._player.getQueue(message.guild!.id)
+            if (!guildQueue || !guildQueue.isPlaying) {
                 message.reply('❌ | No music is being played!')
+                return
             }
+            
+            const embedded = new MessageEmbed()
+                .setColor('#0099ff')
+                .setTitle('Currently Playing')
+                .setURL(guildQueue.nowPlaying.url)
+                .setAuthor(guildQueue.nowPlaying.name, guildQueue.nowPlaying.thumbnail, guildQueue.nowPlaying.url)
+                .setDescription(`Song's length: **${guildQueue.nowPlaying.millisecons}/${guildQueue.nowPlaying.duration}**\n
+                                Requested by: **${guildQueue.nowPlaying.requestedBy?.username ?? 'unknown'}**`)
+                .setThumbnail(guildQueue.nowPlaying.thumbnail)
+
+            message.reply({ embeds: [embedded] })
+
+            //         const guild = this._bot.guilds.cache.get(message.guild!.id!)
+            //         const musicQueue = await this._player.createQueue(guild!, {
+            //             metadata: {
+            //                 channel: message.channel
+            //             }
+            //         })
+
+            //         if (musicQueue && musicQueue.playing) {
+            //             const track = await musicQueue.nowPlaying()
+            //             const time = await musicQueue.getPlayerTimestamp()
+            //             message.reply(
+            //                 `🎶 | Currently Playing ${track.title}\n⏱ | ${time.current}/${time.end}\n📃 | ${track.url}`
+            //             )
+            //         } else {
+            //             message.reply('❌ | No music is being played!')
+            //         }
         } catch (e: any) {
             this._logger.warn('There was an error with playCommand')
             // this._logger.error(e)
@@ -153,13 +289,20 @@ export default class MusicController {
 
     private async _skipCommand(message: Message) {
         try {
-            const musicQueue = this._player.getQueue(message.guildId!)
-            if (!musicQueue || !musicQueue.playing) {
+            const guildQueue = this._player.getQueue(message.guild!.id)
+            if (!guildQueue || !guildQueue.isPlaying) {
                 message.reply('❌ | No music is being played!')
                 return
             }
-            const track = musicQueue.current
-            message.reply(musicQueue.skip() ? `✅ | Skipped **${track}**!` : '❌ | Something went wrong!')
+            let track = guildQueue?.skip()
+            message.reply(track ? `✅ | Skipped **${track}**!` : '❌ | Something went wrong!')
+            //         const musicQueue = this._player.getQueue(message.guildId!)
+            //         if (!musicQueue || !musicQueue.playing) {
+            //             message.reply('❌ | No music is being played!')
+            //             return
+            //         }
+            //         const track = musicQueue.current
+            //         message.reply(musicQueue.skip() ? `✅ | Skipped **${track}**!` : '❌ | Something went wrong!')
         } catch (e: any) {
             this._logger.warn('There was an error with skipCommand')
             // this._logger.error(e)
@@ -168,44 +311,44 @@ export default class MusicController {
 
     private async _stopCommand(message: Message) {
         try {
-            const musicQueue = this._player.getQueue(message.guildId!)
-            if (!musicQueue || !musicQueue.playing) {
-                message.reply('❌ | No music is being played!')
-                return
-            }
-            musicQueue.destroy()
-            message.reply('🛑 | bye-bye!')
+            //         const musicQueue = this._player.getQueue(message.guildId!)
+            //         if (!musicQueue || !musicQueue.playing) {
+            //             message.reply('❌ | No music is being played!')
+            //             return
+            //         }
+            //         musicQueue.destroy()
+            //         message.reply('🛑 | bye-bye!')
         } catch (e: any) {
             this._logger.warn('There was an error with stopCommand')
             // this._logger.error(e)
         }
     }
 
-    private async _queue(message: Message) {
+    private async _queueCommand(message: Message) {
         try {
-            const musicQueue = this._player.getQueue(message.guildId!)
-            if (!musicQueue || !musicQueue.tracks || !musicQueue.tracks.length) {
-                message.reply('❌ | queue is empty!')
-                return
-            }
+            //         const musicQueue = this._player.getQueue(message.guildId!)
+            //         if (!musicQueue || !musicQueue.tracks || !musicQueue.tracks.length) {
+            //             message.reply('❌ | queue is empty!')
+            //             return
+            //         }
 
-            const currentTrack = musicQueue.current
-            const tracks = musicQueue.tracks.map((track: Track, index: number) => {
-                return `${index + 1}. **${track.title}** - ${track.duration} [${track.url}]`
-            })
+            //         const currentTrack = musicQueue.current
+            //         const tracks = musicQueue.tracks.map((track: Track, index: number) => {
+            //             return `${index + 1}. **${track.title}** - ${track.duration} [${track.url}]`
+            //         })
 
-            const embed = new MessageEmbed()
-            embed.title = 'Music Queue'
-            embed.description = `${tracks.join('\n')}`
-            embed.fields = [
-                {
-                    name: 'Now Playing',
-                    value: `🎶 | Now playing **${currentTrack.title}** - ${currentTrack.duration} [${currentTrack.url}]`,
-                    inline: false
-                }
-            ]
+            //         const embed = new MessageEmbed()
+            //         embed.title = 'Music Queue'
+            //         embed.description = `${tracks.join('\n')}`
+            //         embed.fields = [
+            //             {
+            //                 name: 'Now Playing',
+            //                 value: `🎶 | Now playing **${currentTrack.title}** - ${currentTrack.duration} [${currentTrack.url}]`,
+            //                 inline: false
+            //             }
+            //         ]
 
-            message.reply({ embeds: [embed] })
+            //         message.reply({ embeds: [embed] })
         } catch (e: any) {
             this._logger.warn('There was an error with queue')
             // this._logger.error(e)
@@ -214,19 +357,19 @@ export default class MusicController {
 
     private async _removeCommand(message: Message, content: string) {
         try {
-            const musicQueue = this._player.getQueue(message.guildId!)
-            if (!musicQueue || !musicQueue.tracks || !musicQueue.tracks.length) {
-                message.reply('❌ | queue is empty!')
-                return
-            }
+            //         const musicQueue = this._player.getQueue(message.guildId!)
+            //         if (!musicQueue || !musicQueue.tracks || !musicQueue.tracks.length) {
+            //             message.reply('❌ | queue is empty!')
+            //             return
+            //         }
 
-            const index = parseInt(content.split(' ')[0]) - 1
-            if (index >= musicQueue.tracks.length) {
-                message.reply('❌ | no such index number exists! use `!queue` to display current queue')
-                return
-            }
-            message.reply(`✅ | Removed **${musicQueue.tracks[index].title}**`)
-            musicQueue.remove(index)
+            //         const index = parseInt(content.split(' ')[0]) - 1
+            //         if (index >= musicQueue.tracks.length) {
+            //             message.reply('❌ | no such index number exists! use `!queue` to display current queue')
+            //             return
+            //         }
+            //         message.reply(`✅ | Removed **${musicQueue.tracks[index].title}**`)
+            //         musicQueue.remove(index)
         } catch (e: any) {
             this._logger.warn('There was an error with removeCommand')
             // this._logger.error(e)
@@ -272,10 +415,10 @@ export default class MusicController {
                 }
             }
 
-            if (!rest || rest === '') {
-                this._queue(message)
+            if (!first || first === '') {
+                this._queueCommand(message)
             } else {
-                message.reply('This command is not supported')
+                message.reply(`This command is not supported - try '${process.env.PREFIX}queue help'`)
             }
         } catch (e: any) {
             message.reply('Something has gone terribly wrong! 😵‍💫')
