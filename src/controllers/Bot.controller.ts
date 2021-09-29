@@ -1,5 +1,5 @@
-import { Client, Message, Intents, ActivitiesOptions } from 'discord.js'
-import { UserConfig } from '../services/UserConfig.service'
+import { Client, Message, Intents, ActivitiesOptions, Guild } from 'discord.js'
+import { BotConfig } from '../services/BotConfig.service'
 import RatingController from './Rating.controller'
 import WatcherController from './Watcher.controller'
 import MusicController from './Music.controller'
@@ -47,7 +47,7 @@ export default class BotController {
     private _reconnectAttemptsCount: number
     private _logger: Logger
 
-    public config: UserConfig
+    public config: BotConfig
     public music: MusicController
     public watcher: WatcherController | undefined
     public rating: RatingController | undefined
@@ -66,13 +66,13 @@ export default class BotController {
             [BotEvents.MESSAGE]: this._message.bind(this)
         }
 
-        this.config = new UserConfig()
+        this.config = BotConfig.instance
         this.music = new MusicController(this._bot)
 
-        if (this.config.ipwatcher) {
+        if (this.config.getIPWatcher()) {
             this.watcher = new WatcherController(this._bot)
         }
-        if (this.config.rating) {
+        if (this.config.getRating()) {
             this.rating = new RatingController(this._bot)
         }
 
@@ -114,7 +114,7 @@ export default class BotController {
     }
 
     private _message(message: Message) {
-        if (message.content.startsWith(this.config.prefix)) {
+        if (message.content.startsWith(this.config.getPrefix(message.guildId))) {
             this._handleCommands(message)
             return
         }
@@ -138,15 +138,17 @@ export default class BotController {
 
     public async setPresence(activities: ActivitiesOptions[] = []) {
         try {
-            await this._bot.user?.setPresence({
-                status: 'online',
-                activities: [
-                    {
-                        name: `Prefix: ${this.config.prefix}`,
-                        type: 'WATCHING'
-                    },
-                    ...activities
-                ]
+            this._bot.guilds.cache.each(async (g: Guild) => {
+                await this._bot.guilds.cache.get(g.id)?.client.user?.setPresence({
+                    status: 'online',
+                    activities: [
+                        {
+                            name: `Prefix: ${this.config.getPrefix()}`,
+                            type: 'WATCHING'
+                        },
+                        ...activities
+                    ]
+                })
             })
         } catch (e) {
             this._logger.warn('Error Setting Presence')

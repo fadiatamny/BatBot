@@ -1,8 +1,7 @@
 import http from 'http'
 import BotController from '../controllers/Bot.controller'
+import { HourInMS } from '../utils'
 import { Logger } from '../utils/Logger'
-
-const HourInMS = 3.6e6
 
 export default class WatcherService {
     private _job: NodeJS.Timer | undefined
