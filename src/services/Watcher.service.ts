@@ -1,8 +1,7 @@
 import http from 'http'
 import BotController from '../controllers/Bot.controller'
+import { HourInMS } from '../utils'
 import { Logger } from '../utils/Logger'
-
-const HourInMS = 3.6e6
 
 export default class WatcherService {
     private _job: NodeJS.Timer | undefined
@@ -38,7 +37,8 @@ export default class WatcherService {
                 }
             })
         } catch (e) {
-            this._logger.error(e)
+            this._logger.warn('Error occured in watcher service')
+            // this._logger.error(e)
             return ''
         }
     }
@@ -48,7 +48,7 @@ export default class WatcherService {
             return
         }
         this._poll()
-        this._job = setInterval(this._poll, this._pollingInterval)
+        this._job = setInterval(this._poll.bind(this), this._pollingInterval)
     }
 
     public stop() {
