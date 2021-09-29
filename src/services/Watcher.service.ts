@@ -38,7 +38,7 @@ export default class WatcherService {
             })
         } catch (e) {
             this._logger.warn('Error occured in watcher service')
-            // this._logger.error(e)
+            this._logger.error(e)
             return ''
         }
     }

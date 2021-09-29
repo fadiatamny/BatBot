@@ -60,7 +60,7 @@ export default class BotController {
         this._bot = new Client({ intents })
         this._bot.on('error', (e: any) => {
             this._logger.warn('Error occured in the bot client')
-            // this._logger.error(e)
+            this._logger.error(e)
         })
         this._handlers = {
             [BotEvents.READY]: this._ready.bind(this),

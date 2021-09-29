@@ -49,7 +49,7 @@ export default class RatingController {
         } catch (e: any) {
             message.reply(`There was an error adding your rating.`)
             this._logger.warn('Error occured adding rating')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -127,7 +127,7 @@ export default class RatingController {
         } catch (e: any) {
             message.reply(`There was an error listing the rating`)
             this._logger.warn('Error occured in listing')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 

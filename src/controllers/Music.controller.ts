@@ -283,7 +283,7 @@ export default class MusicController {
             }
         } catch (e: any) {
             this._logger.warn('There was an error with playCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -299,7 +299,7 @@ export default class MusicController {
             message.reply({ embeds: [embedded] })
         } catch (e: any) {
             this._logger.warn('There was an error with playCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -314,7 +314,7 @@ export default class MusicController {
             message.reply(song ? `✅ | Skipped **${song}**!` : '❌ | Something went wrong!')
         } catch (e: any) {
             this._logger.warn('There was an error with skipCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -335,7 +335,7 @@ export default class MusicController {
             })
         } catch (e: any) {
             this._logger.warn('There was an error with pauseCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -356,7 +356,7 @@ export default class MusicController {
             })
         } catch (e: any) {
             this._logger.warn('There was an error with resumeCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -371,7 +371,7 @@ export default class MusicController {
             message.reply(`✅ | Queue has been shuffled.`)
         } catch (e: any) {
             this._logger.warn('There was an error with shuffleCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -385,7 +385,7 @@ export default class MusicController {
             guildQueue.clearQueue()
         } catch (e: any) {
             this._logger.warn('There was an error with clearCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -407,7 +407,7 @@ export default class MusicController {
             })
         } catch (e: any) {
             this._logger.warn('There was an error with stopCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -430,7 +430,7 @@ export default class MusicController {
             })
         } catch (e: any) {
             this._logger.warn('There was an error with stopCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -507,7 +507,7 @@ export default class MusicController {
             message.reply({ embeds: [embedded] })
         } catch (e: any) {
             this._logger.warn('There was an error with queue')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -527,7 +527,7 @@ export default class MusicController {
             message.reply(`✅ | Removed **${song}**`)
         } catch (e: any) {
             this._logger.warn('There was an error with removeCommand')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 
@@ -578,7 +578,7 @@ export default class MusicController {
         } catch (e: any) {
             message.reply('Something has gone terribly wrong! 😵‍💫')
             this._logger.warn('There was an error with handleCommands')
-            // this._logger.error(e)
+            this._logger.error(e)
         }
     }
 }
