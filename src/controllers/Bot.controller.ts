@@ -132,7 +132,7 @@ export default class BotController {
                 this._connect()
             } else {
                 this._logger.warn('Max Reconnect Attempts Reached!')
-                // this._logger.error('Error Occured', e)
+                this._logger.error('Error Occured', e)
             }
         }
     }
@@ -154,7 +154,7 @@ export default class BotController {
             })
         } catch (e) {
             this._logger.warn('Error Setting Presence')
-            // this._logger.error('Error Occured', e)
+            this._logger.error('Error Occured', e)
         }
     }
 }
