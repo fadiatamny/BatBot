@@ -31,12 +31,15 @@ export class BotConfig implements BotConfigModel {
         if (data) {
             const config = JSON.parse(data) as Dictionary
             this._logLevel = config.logLevel ?? this._logLevel
-            this._defaults = cloneDeep(config.default)
-            this._servers = {}
-
-            for (const [key, value] of Object.entries(config.servers as { [key: string]: UserConfig })) {
-                this._servers[key] = cloneDeep(value)
-            }
+            this._defaults = config.defaults
+                ? cloneDeep(config.defaults)
+                : {
+                      prefix: process.env.BOT_PREFIX ?? '!',
+                      music: {
+                          djRole: '*'
+                      }
+                  }
+            this._servers = config.servers ? cloneDeep(config.servers) : {}
         } else {
             this._defaults = {
                 prefix: process.env.BOT_PREFIX ?? '!',
@@ -49,7 +52,7 @@ export class BotConfig implements BotConfigModel {
         this._interval = setInterval(this._dumpConfigToFile.bind(this), HourInMS)
     }
 
-    private _toJson (): Dictionary {
+    private _toJson(): Dictionary {
         return {
             logLevel: this._logLevel,
             defaults: this._defaults,
@@ -63,7 +66,7 @@ export class BotConfig implements BotConfigModel {
         FileLoader.dumpToFile(this._filePath, JSON.stringify(obj))
     }
 
-    public saveConfig () {
+    public saveConfig() {
         if (this._interval) {
             clearInterval(this._interval)
             this._interval = null

@@ -1,6 +1,6 @@
 {
     "logLevel": "DEUBG",
-    "default": {
+    "defaults": {
         "ipwatcher": [
             {
                 "serverId": "",
