@@ -19,7 +19,7 @@ export class BotConfig implements BotConfigModel {
     private _filePath: string
     private _logLevel: LogLevels
     private _defaults: UserConfig
-    private _servers?: { [key: string]: UserConfig }
+    private _servers?: { [key: string]: Partial<UserConfig> }
     private _interval: NodeJS.Timer | null
 
     constructor() {

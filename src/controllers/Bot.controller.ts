@@ -1,4 +1,4 @@
-import { Client, Message, Intents, ActivitiesOptions, Guild } from 'discord.js'
+import { Client, Message, Intents, ActivitiesOptions, Guild, PresenceData } from 'discord.js'
 import { BotConfig } from '../services/BotConfig.service'
 import RatingController from './Rating.controller'
 import WatcherController from './Watcher.controller'
@@ -139,16 +139,17 @@ export default class BotController {
     public async setPresence(activities: ActivitiesOptions[] = []) {
         try {
             this._bot.guilds.cache.each(async (g: Guild) => {
-                await this._bot.guilds.cache.get(g.id)?.client.user?.setPresence({
+                const presenceConfig: PresenceData = {
                     status: 'online',
                     activities: [
                         {
-                            name: `Prefix: ${this.config.getPrefix()}`,
+                            name: `Prefix: ${this.config.getPrefix(g.id)}`,
                             type: 'WATCHING'
                         },
                         ...activities
                     ]
-                })
+                }
+                await this._bot.guilds.cache.get(g.id)?.client.user?.setPresence(presenceConfig)
             })
         } catch (e) {
             this._logger.warn('Error Setting Presence')

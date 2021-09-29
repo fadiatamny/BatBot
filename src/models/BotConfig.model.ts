@@ -35,5 +35,5 @@ export interface UserConfig {
 export interface BotConfig {
     logLevel: LogLevels
     defaults: UserConfig
-    servers?: { [key: string]: UserConfig }
+    servers?: { [key: string]: Partial<UserConfig> }
 }
