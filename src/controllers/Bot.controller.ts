@@ -139,19 +139,17 @@ export default class BotController {
 
     public async setPresence(activities: ActivitiesOptions[] = []) {
         try {
-            this._bot.guilds.cache.each(async (g: Guild) => {
-                const presenceConfig: PresenceData = {
-                    status: 'online',
-                    activities: [
-                        {
-                            name: `Prefix: ${this.config.getPrefix(g.id)}`,
-                            type: 'WATCHING'
-                        },
-                        ...activities
-                    ]
-                }
-                await this._bot.guilds.cache.get(g.id)?.client.user?.setPresence(presenceConfig)
-            })
+            const presenceConfig: PresenceData = {
+                status: 'online',
+                activities: [
+                    {
+                        name: `You :)`,
+                        type: 'WATCHING'
+                    },
+                    ...activities
+                ]
+            }
+            await this._bot.user?.setPresence(presenceConfig)
         } catch (e) {
             this._logger.warn('Error Setting Presence')
             this._logger.error('Error Occured', e)
