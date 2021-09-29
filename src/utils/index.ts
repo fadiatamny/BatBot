@@ -13,3 +13,5 @@ export const removeFirstWord = (content: string) => {
 export const delay = (ms: number) => {
     return new Promise((resolve) => setTimeout(resolve, ms))
 }
+
+export const HourInMS = 3.6e6

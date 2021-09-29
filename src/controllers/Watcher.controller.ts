@@ -54,7 +54,11 @@ export default class WatcherController {
     }
 
     private async _isInCorrectChannel() {
-        const available = BotController.instance.config.ipwatcher!
+        const available = BotController.instance.config.getIPWatcher()
+        if (!available) {
+            return
+        }
+
         for (const c of available) {
             const guild = await this._bot.guilds.fetch(c.serverId)
             if (guild) {
@@ -86,7 +90,11 @@ export default class WatcherController {
     }
 
     public async setPresenceMessage(ip: string) {
-        const available = BotController.instance.config.ipwatcher!
+        const available = BotController.instance.config.getIPWatcher()
+        if (!available) {
+            return
+        }
+
         for (const config of available) {
             try {
                 const guild = await this._bot.guilds.fetch(config.serverId)

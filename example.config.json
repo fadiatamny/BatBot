@@ -1,12 +1,29 @@
 {
-    "ipwatcher": [
-        {
-            "serverId": "",
-            "channelName": ""
+    "logLevel": "DEUBG",
+    "defaults": {
+        "ipwatcher": [
+            {
+                "serverId": "",
+                "channelName": ""
+            }
+        ],
+        "prefix": "",
+        "music": {
+            "djRole": "*"
         }
-    ],
-    "prefix": "",
-    "music": {
-        "djRole": "*"
+    },
+    "servers": {
+        "serverId": {            
+            "ipwatcher": [
+                {
+                    "serverId": "",
+                    "channelName": ""
+                }
+            ],
+            "prefix": "",
+            "music": {
+                "djRole": "*"
+            }
+        }
     }
 }
