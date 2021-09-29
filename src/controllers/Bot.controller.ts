@@ -9,7 +9,8 @@ import { delay, removeFirstWord } from '../utils'
 enum BotServices {
     WATCHER = 'watcher',
     RATING = 'rating',
-    MUSIC = 'queue'
+    MUSIC = 'queue',
+    MUSIC_SHORT = 'q'
 }
 
 enum BotEvents {
@@ -96,7 +97,6 @@ export default class BotController {
     private _handleCommands(message: Message) {
         const content = message.content.substring(1)
         const { first, rest } = removeFirstWord(content)
-
         switch (first?.toLowerCase()) {
             case BotServices.WATCHER:
                 this.watcher?.handleCommands(rest, message)
@@ -105,6 +105,7 @@ export default class BotController {
                 this.rating?.handleCommands(rest, message)
                 break
             case BotServices.MUSIC:
+            case BotServices.MUSIC_SHORT:
                 this.music.handleCommands(rest, message)
                 break
             default:
