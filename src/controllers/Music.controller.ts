@@ -58,7 +58,7 @@ export default class MusicController {
 
         this._player.on('playlistAdd', (queue: Queue, playlist: Playlist) => {
             try {
-                const position = queue.songs.indexOf(playlist.songs[0])+1
+                const position = queue.songs.indexOf(playlist.songs[0]) + 1
                 queue.data.message.reply({
                     embeds: [{
                         color: '#00ff00',
@@ -118,7 +118,7 @@ export default class MusicController {
         })
     }
 
-    private _songEmbedded(queue: Queue, song: Song, name: string, queued = false) {
+    private _songEmbedded(queue: Queue, song: Song, name: string, queued = false, current = false) {
         const embedded = new MessageEmbed()
         try {
             embedded.setColor('#00ff00')
@@ -127,13 +127,13 @@ export default class MusicController {
                 .setAuthor(name, song.requestedBy?.avatarURL() ?? undefined, song.url)
                 .addFields(
                     { name: 'Channel', value: song.author, inline: true },
-                    { name: 'Song Duration', value: song.duration, inline: true },
+                    { name: 'Song Duration', value: current ? queue.createProgressBar().times : song.duration, inline: true },
                     { name: 'Requested by', value: song.requestedBy?.username ?? 'unkown', inline: true },
                 )
                 .setThumbnail(song.thumbnail)
             if (queued) {
                 embedded.addFields(
-                    { name: 'Position in queue', value: (queue.songs.indexOf(song)+1).toString(), inline: false },
+                    { name: 'Position in queue', value: (queue.songs.indexOf(song) + 1).toString(), inline: false },
                 )
             }
         } catch (e: any) {
@@ -294,7 +294,7 @@ export default class MusicController {
                 message.reply('❌ | No music is being played!')
                 return
             }
-            const embedded = this._songEmbedded(guildQueue, guildQueue.nowPlaying, 'Currently Playing', false)
+            const embedded = this._songEmbedded(guildQueue, guildQueue.nowPlaying, 'Currently Playing', false, true)
                 .setColor('#0099ff')
             message.reply({ embeds: [embedded] })
         } catch (e: any) {
@@ -449,7 +449,7 @@ export default class MusicController {
                 }
             }
             const queueLength = guildQueue.songs.length
-            if(10*(index-1) >= queueLength || 10*(index-1) < 0) {
+            if (10 * (index - 1) >= queueLength || 10 * (index - 1) < 0) {
                 message.reply('❌ | page index invalid! displaying 1st page..')
                 index = 1
             }
@@ -466,6 +466,9 @@ export default class MusicController {
             const minutes = Math.floor((queueDuration - (hours * 3600)) / 60)
             const seconds = queueDuration - (hours * 3600) - (minutes * 60)
             const songs = guildQueue.songs.slice(start, end).map((song, i) => {
+                if (i === 0 && start === 0) {
+                    return ''
+                }
                 return `${i + start + 1}. **${song}** - ${song.duration}\n\ \ [${song.url}]`
             })
 
@@ -474,6 +477,11 @@ export default class MusicController {
                 title: 'Music Queue',
                 description: `${songs.join('\n')}`,
                 fields: [
+                    {
+                        name: 'Currently Playing',
+                        value: `▶ | **${guildQueue.nowPlaying}**\n 🕒 | **${guildQueue.createProgressBar().times}**\n📃 | [${guildQueue.nowPlaying.url}]\n`,
+                        inline: false,
+                    },
                     {
                         name: 'Total Songs',
                         value: queueLength.toString(),
@@ -493,11 +501,6 @@ export default class MusicController {
                                     { minimumIntegerDigits: 2, useGrouping: false })}`,
                         inline: true,
                     },
-                    {
-                        name: 'Now Playing',
-                        value: `🎶 | **${nowPlaying}** - ${nowPlaying.duration}\n📃 | [${nowPlaying.url}]`,
-                        inline: false,
-                    }
                 ],
             }
 
