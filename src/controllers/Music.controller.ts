@@ -60,24 +60,25 @@ export default class MusicController {
 
         this._player.on('playlistAdd', (queue: Queue, playlist: Playlist) => {
             try {
-                playlist.songs[0].data.message.reply({
+                const position = queue.songs.indexOf(playlist.songs[0])+1
+                queue.data.message.reply({
                     embeds: [{
                         color: '#00ff00',
-                        title: playlist.toString(),
+                        title: playlist.name,
                         author: {
                             name: 'Playlist added to queue',
-                            icon_url: playlist.songs[0].data.message.member.user.avatarURL(),
+                            icon_url: playlist.songs[0].requestedBy?.avatarURL(),
                             url: playlist.url,
                         },
                         fields: [
                             {
                                 name: 'Position in queue',
-                                value: playlist.songs[0].data.index.toString() ?? '?',
+                                value: position.toString(),
                                 inline: true,
                             },
                             {
                                 name: 'Enqueued',
-                                value: playlist.songs.length,
+                                value: playlist.songs.length.toString(),
                                 inline: true,
                             },
                         ]
@@ -99,20 +100,20 @@ export default class MusicController {
                 .setColor('#0099ff')
 
             this._addedInitialTrack = false
-            queue.data.channel.send({ embeds: [embedded] })
+            queue.data.message.channel.send({ embeds: [embedded] })
             //await
         }).on('songChanged', (queue: Queue, newSong: Song, oldSong: Song) => {
             const embedded = this._songEmbedded(queue, newSong, 'Now Playing')
                 .setColor('#0099ff')
 
-            queue.data.channel.send({ embeds: [embedded] })
+            queue.data.message.channel.send({ embeds: [embedded] })
         }).on('queueEnd', async (queue: Queue) => {
             const embedded = new MessageEmbed()
                 .setColor('#ff0000')
                 .setTitle('Queue is over')
                 .setDescription('The queue has ended.')
             this._addedInitialTrack = true
-            await queue.data.channel.send({ embeds: [embedded] })
+            await queue.data.message.channel.send({ embeds: [embedded] })
         }).on('error', (e: any) => {
             this._logger.warn('error occured with the discord-music-player instance')
             this._logger.error(e)
@@ -134,7 +135,7 @@ export default class MusicController {
                 .setThumbnail(song.thumbnail)
             if (queued) {
                 embedded.addFields(
-                    { name: 'Position in queue', value: song.data.index.toString() ?? '?', inline: false },
+                    { name: 'Position in queue', value: (queue.songs.indexOf(song)+1).toString(), inline: false },
                 )
             }
         } catch (e: any) {
@@ -182,6 +183,11 @@ export default class MusicController {
                 {
                     name: 'Shuffle queue',
                     value: `${process.env.BOT_PREFIX}q ${MusicCommands.SHUFFLE}`,
+                    inline: true,
+                },
+                {
+                    name: 'Display queue',
+                    value: `${process.env.BOT_PREFIX}q <#>`,
                     inline: true,
                 },
                 {
@@ -243,15 +249,10 @@ export default class MusicController {
             let queue = this._player.createQueue(message.guild!.id,
                 {
                     data: {
-                        channel: message.channel,
+                        message: message,
                     }
                 })
 
-            const index = queue.songs.length ?? 0
-
-            // if (queue && !queue.isPlaying && (!queue.songs || !queue.songs.length)) {
-            //     this._addedInitialTrack = true
-            // }
             await queue.join(message.member!.voice.channel!)
             message.reply('🎵 Searching 🔎 `' + content + '`')
             if (!isPlaylist) {
@@ -259,7 +260,6 @@ export default class MusicController {
                     requestedBy: message.member.user,
                     data: {
                         message: message,
-                        index: index,
                     }
                 }).catch(_ => {
                     this._logger.warn(`queue.play catch`)
@@ -274,14 +274,10 @@ export default class MusicController {
             else {
                 let playlist = await queue.playlist(content, {
                     requestedBy: message.member.user,
-                    data: {
-                        message: message,
-                        index: index,
-                    },
                 }).catch(_ => {
                     this._logger.warn(`queue.playlist catch`)
                     if (!guildQueue)
-                        queue.stop();
+                        queue.stop()
                 })
                 if (!playlist) {
                     message.reply(`❌ | your playlist couldn't be found, if it's a song try '**${MusicCommands.PLAY}**' instead of '**${MusicCommands.PLAYLIST}**'`)
@@ -355,8 +351,8 @@ export default class MusicController {
             guildQueue.setPaused(false)
             message.reply({
                 embeds: [{
-                    color: '#00FF00',
-                    title: 'Paused',
+                    color: '#0099ff',
+                    title: 'Resumed',
                     description: `Music has been resumed.`,
                 }]
             })
@@ -374,6 +370,7 @@ export default class MusicController {
                 return
             }
             guildQueue.shuffle()
+            message.reply(`✅ | Queue has been shuffled.`)
         } catch (e: any) {
             this._logger.warn('There was an error with shuffleCommand')
             // this._logger.error(e)
@@ -419,7 +416,7 @@ export default class MusicController {
     private async _disconnectCommand(message: Message) {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
-            if (!guildQueue || !guildQueue.connection || !guildQueue.connection.channel) {
+            if (!guildQueue || !guildQueue.connection) {
                 message.reply(`❌ | I'm not connected to a voice channel!`)
                 return
             }
@@ -439,7 +436,7 @@ export default class MusicController {
         }
     }
 
-    private async _queueCommand(message: Message, content: string) {
+    private async _queueCommand(message: Message, content: string | undefined) {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.songs || !guildQueue.songs.length) {
@@ -453,10 +450,14 @@ export default class MusicController {
                     index = 1
                 }
             }
+            const queueLength = guildQueue.songs.length
+            if(10*(index-1) >= queueLength || 10*(index-1) < 0) {
+                message.reply('❌ | page index invalid! displaying 1st page..')
+                index = 1
+            }
             const start = 10 * (index - 1)
             const end = start + 10
             const nowPlaying = guildQueue.nowPlaying
-            const queueLength = guildQueue.songs.length
             let queueDuration = 0
             for (let i = 0; i < queueLength; i++) {
                 queueDuration += guildQueue.songs[i].millisecons
@@ -467,14 +468,13 @@ export default class MusicController {
             const minutes = Math.floor((queueDuration - (hours * 3600)) / 60)
             const seconds = queueDuration - (hours * 3600) - (minutes * 60)
             const songs = guildQueue.songs.slice(start, end).map((song, i) => {
-                return `${i + start + 1}. **${song}** - ${song.duration}\n[${song.url}]`
+                return `${i + start + 1}. **${song}** - ${song.duration}\n\ \ [${song.url}]`
             })
 
             const embedded = {
                 color: 0x00ff00,
                 title: 'Music Queue',
-                description: `${songs.join('\n')}
-                    \nSongs: ${queueLength} \t Page: ${index}/${Math.ceil(queueLength / 10)}`,
+                description: `${songs.join('\n')}`,
                 fields: [
                     {
                         name: 'Total Songs',
@@ -518,8 +518,8 @@ export default class MusicController {
                 return
             }
             const index = parseInt(content) - 1
-            if (index >= guildQueue.songs.length) {
-                message.reply(`❌ | invalid position! try '${process.env.BOT_TOKEN}q' to display playlist.`)
+            if (index >= guildQueue.songs.length || index < 0) {
+                message.reply(`❌ | invalid position! try '${process.env.BOT_PREFIX}q' to display playlist.`)
                 return
             }
             const song = guildQueue.remove(index)
@@ -569,8 +569,8 @@ export default class MusicController {
                 }
             }
 
-            if (!first || first === '') {
-                this._queueCommand(message, rest)
+            if (!first || first === '' || parseInt(first) != NaN) {
+                this._queueCommand(message, first)
             } else {
                 message.reply(`This command is not supported - try '${process.env.PREFIX}queue help'`)
             }
