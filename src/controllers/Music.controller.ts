@@ -238,7 +238,7 @@ export default class MusicController {
             return false
         }
 
-        const djRole = BotController.instance.config.music.djRole
+        const djRole = BotController.instance.config.getMusic(message.guildId)?.djRole ?? '*'
         const roleExists = message.member.roles.cache.find((r: Role) => r.name === djRole)
         if (djRole !== '*' && !roleExists) {
             return false
