@@ -5,6 +5,7 @@ import { enumKeys, removeFirstWord } from '../utils'
 import { BotError } from '../models/BotError.model'
 import BotController from './Bot.controller'
 import { Player, Playlist, Queue, Song } from 'discord-music-player'
+import { isEmpty, isNumber } from 'lodash'
 
 enum MusicCommands {
     HELP = 'help',
@@ -614,7 +615,7 @@ export default class MusicController {
                 }
             }
 
-            if (!first || first === '' || parseInt(first) != NaN) {
+            if (!first || isEmpty(first) || isNumber(first)) {
                 this._queueCommand(message, first)
             } else {
                 message.reply(
