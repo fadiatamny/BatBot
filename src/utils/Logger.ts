@@ -8,22 +8,24 @@ export class Logger {
 
     constructor(private _name: string) {}
 
-    public log(...log: any) {
+    private _getTime () {
         const date = new Date()
-        console.log(`(${date.getHours()}:${date.getMinutes()}) [${this._name}]`, ...log)
+        return `${date.getDate()}/${date.getMonth() + 1} | ${date.getHours()}:${date.getMinutes()}`
+    }
+
+    public log(...log: any) {
+        console.log(`(${this._getTime()}) [${this._name}]`, ...log)
     }
     public error(...log: any) {
         if (LogPriority[this.loggingLevel] < LogPriority[LogLevels.ERROR]) {
             return
         }
-        const date = new Date()
-        console.error(`(${date.getHours()}:${date.getMinutes()}) [${this._name}]`, ...log)
+        console.error(`(${this._getTime()}) [WARNING][${this._name}]`, ...log)
     }
     public warn(...log: any) {
         if (LogPriority[this.loggingLevel] < LogPriority[LogLevels.WARN]) {
             return
         }
-        const date = new Date()
-        console.warn(`(${date.getHours()}:${date.getMinutes()}) [${this._name}]`, ...log)
+        console.warn(`(${this._getTime()}) [ERROR][${this._name}]`, ...log)
     }
 }
