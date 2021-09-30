@@ -10,20 +10,20 @@ export class Logger {
 
     public log(...log: any) {
         const date = new Date()
-        console.log(`(${date.getHours()}:${date.getMinutes()}) [${this._name} - LOG] - `, ...log)
+        console.log(`(${date.getHours()}:${date.getMinutes()}) [${this._name}]`, ...log)
     }
     public error(...log: any) {
         if (LogPriority[this.loggingLevel] < LogPriority[LogLevels.ERROR]) {
             return
         }
         const date = new Date()
-        console.log(`(${date.getHours()}:${date.getMinutes()}) [${this._name} - ERROR] - `, ...log)
+        console.error(`(${date.getHours()}:${date.getMinutes()}) [${this._name}]`, ...log)
     }
     public warn(...log: any) {
         if (LogPriority[this.loggingLevel] < LogPriority[LogLevels.WARN]) {
             return
         }
         const date = new Date()
-        console.log(`(${date.getHours()}:${date.getMinutes()}) [${this._name} - WARNING] - `, ...log)
+        console.warn(`(${date.getHours()}:${date.getMinutes()}) [${this._name}]`, ...log)
     }
 }
