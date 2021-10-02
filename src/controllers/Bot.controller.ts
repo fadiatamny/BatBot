@@ -138,12 +138,15 @@ export default class BotController {
     }
 
     public async setPresence(activities: ActivitiesOptions[] = []) {
+        let presenceMessage = process.env.$npm_package_version ?? process.env.npm_package_version
+        presenceMessage = presenceMessage ? `v${presenceMessage}` : 'You :)'
+
         try {
             const presenceConfig: PresenceData = {
                 status: 'online',
                 activities: [
                     {
-                        name: `You :)`,
+                        name: presenceMessage,
                         type: 'WATCHING'
                     },
                     ...activities
