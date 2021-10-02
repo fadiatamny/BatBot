@@ -50,10 +50,10 @@ export default class MusicController {
 
         this._workQueue = new WorkQueue()
         this._player = new Player(this._bot, {
-            leaveOnEmpty: false,
-            leaveOnStop: false,
-            leaveOnEnd: false,
-            timeout: 1
+            leaveOnEmpty: true,
+            leaveOnStop: true,
+            leaveOnEnd: true,
+            timeout: 60000
         })
         this._logger = new Logger('MusicController')
 
@@ -118,6 +118,15 @@ export default class MusicController {
                 this._addedInitialTrack = true
                 await queue.data.message.channel.send({ embeds: [embedded] })
             })
+            .on('channelEmpty', (queue: Queue) => {
+                this._logger.log('channel is empty - guild: ' + queue.guild.name)
+            })
+            .on('clientDisconnect', (queue: Queue) => {
+                this._logger.log('clientDisconnect - guild: ' + queue.guild.name)
+                this._workQueue.clear()
+                if (queue)
+                    queue.destroy()
+            })
             .on('error', (e: any) => {
                 this._logger.warn('error occured with the discord-music-player instance')
                 this._logger.error(e)
@@ -175,9 +184,8 @@ export default class MusicController {
                 },
                 {
                     name: 'Queue playlist',
-                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${
-                        MusicCommands.PLAYLIST
-                    } <playlist>`,
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${MusicCommands.PLAYLIST
+                        } <playlist>`,
                     inline: true
                 },
                 {
@@ -192,9 +200,8 @@ export default class MusicController {
                 },
                 {
                     name: 'Dequeue song',
-                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${
-                        MusicCommands.REMOVE
-                    } <position>`,
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${MusicCommands.REMOVE
+                        } <position>`,
                     inline: true
                 },
                 {
@@ -229,9 +236,8 @@ export default class MusicController {
                 },
                 {
                     name: 'Disconnect bot',
-                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${MusicCommands.DISCONNECT}/${
-                        MusicCommands.DC
-                    }`,
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${MusicCommands.DISCONNECT}/${MusicCommands.DC
+                        }`,
                     inline: true
                 },
                 {
@@ -272,17 +278,20 @@ export default class MusicController {
             })
 
             await queue.join(message.member!.voice.channel!)
-            message.reply('🎵 Searching 🔎 `' + content + '`')
+            
+            await message.reply('🎵 Searching 🔎 `' + content + '`')
             if (!isPlaylist) {
                 const song = await queue
                     .play(content, {
                         requestedBy: message.member.user,
                         data: {
-                            message: message
+                            message: message,
+                            nickname: message.member.displayName,
                         }
                     })
-                    .catch((_) => {
+                    .catch((e) => {
                         this._logger.warn(`queue.play catch`)
+                        this._logger.error(e)
                         if (!guildQueue) queue.stop()
                     })
                 if (!song) {
@@ -296,8 +305,9 @@ export default class MusicController {
                     .playlist(content, {
                         requestedBy: message.member.user
                     })
-                    .catch((_) => {
+                    .catch((e) => {
                         this._logger.warn(`queue.playlist catch`)
+                        this._logger.error(e)
                         if (!guildQueue) queue.stop()
                     })
                 if (!playlist) {
@@ -441,6 +451,7 @@ export default class MusicController {
                     }
                 ]
             })
+
         } catch (e: any) {
             this._logger.warn('There was an error with stopCommand')
             this._logger.error(e)
@@ -450,13 +461,12 @@ export default class MusicController {
     private async _disconnectCommand(message: Message) {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
-            if (!guildQueue || !guildQueue.connection) {
+            if ((!guildQueue || !guildQueue.connection)) {
                 message.reply(`❌ | I'm not connected to a voice channel!`)
                 return
             }
             this._addedInitialTrack = true
-            guildQueue.stop()
-            guildQueue.connection.leave()
+            guildQueue.destroy()
             message.reply({
                 embeds: [
                     {
@@ -515,9 +525,8 @@ export default class MusicController {
                 fields: [
                     {
                         name: 'Currently Playing',
-                        value: `▶ | **${guildQueue.nowPlaying}**\n 🕒 | **${
-                            guildQueue.createProgressBar().times
-                        }**\n📃 | [${guildQueue.nowPlaying.url}]\n`,
+                        value: `▶ | **${guildQueue.nowPlaying}**\n 🕒 | **${guildQueue.createProgressBar().times
+                            }**\n📃 | [${guildQueue.nowPlaying.url}]\n`,
                         inline: false
                     },
                     {
