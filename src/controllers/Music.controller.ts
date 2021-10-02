@@ -124,8 +124,7 @@ export default class MusicController {
             .on('clientDisconnect', (queue: Queue) => {
                 this._logger.log('clientDisconnect - guild: ' + queue.guild.name)
                 this._workQueue.clear()
-                if (queue)
-                    queue.destroy()
+                if (queue) queue.destroy()
             })
             .on('error', (e: any) => {
                 this._logger.warn('error occured with the discord-music-player instance')
@@ -278,7 +277,7 @@ export default class MusicController {
             })
 
             await queue.join(message.member!.voice.channel!)
-            
+
             await message.reply('🎵 Searching 🔎 `' + content + '`')
             if (!isPlaylist) {
                 const song = await queue
@@ -286,7 +285,7 @@ export default class MusicController {
                         requestedBy: message.member.user,
                         data: {
                             message: message,
-                            nickname: message.member.displayName,
+                            nickname: message.member.displayName
                         }
                     })
                     .catch((e) => {
@@ -451,7 +450,6 @@ export default class MusicController {
                     }
                 ]
             })
-
         } catch (e: any) {
             this._logger.warn('There was an error with stopCommand')
             this._logger.error(e)
@@ -461,7 +459,7 @@ export default class MusicController {
     private async _disconnectCommand(message: Message) {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
-            if ((!guildQueue || !guildQueue.connection)) {
+            if (!guildQueue || !guildQueue.connection) {
                 message.reply(`❌ | I'm not connected to a voice channel!`)
                 return
             }
