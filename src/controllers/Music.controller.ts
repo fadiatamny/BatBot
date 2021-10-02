@@ -50,10 +50,10 @@ export default class MusicController {
 
         this._workQueue = new WorkQueue()
         this._player = new Player(this._bot, {
-            leaveOnEmpty: false,
-            leaveOnStop: false,
-            leaveOnEnd: false,
-            timeout: 1
+            leaveOnEmpty: true,
+            leaveOnStop: true,
+            leaveOnEnd: true,
+            timeout: 60000
         })
         this._logger = new Logger('MusicController')
 
@@ -117,6 +117,14 @@ export default class MusicController {
                     .setDescription('The queue has ended.')
                 this._addedInitialTrack = true
                 await queue.data.message.channel.send({ embeds: [embedded] })
+            })
+            .on('channelEmpty', (queue: Queue) => {
+                this._logger.log('channel is empty - guild: ' + queue.guild.name)
+            })
+            .on('clientDisconnect', (queue: Queue) => {
+                this._logger.log('clientDisconnect - guild: ' + queue.guild.name)
+                this._workQueue.clear()
+                if (queue) queue.destroy()
             })
             .on('error', (e: any) => {
                 this._logger.warn('error occured with the discord-music-player instance')
@@ -272,17 +280,20 @@ export default class MusicController {
             })
 
             await queue.join(message.member!.voice.channel!)
-            message.reply('🎵 Searching 🔎 `' + content + '`')
+
+            await message.reply('🎵 Searching 🔎 `' + content + '`')
             if (!isPlaylist) {
                 const song = await queue
                     .play(content, {
                         requestedBy: message.member.user,
                         data: {
-                            message: message
+                            message: message,
+                            nickname: message.member.displayName
                         }
                     })
-                    .catch((_) => {
+                    .catch((e) => {
                         this._logger.warn(`queue.play catch`)
+                        this._logger.error(e)
                         if (!guildQueue) queue.stop()
                     })
                 if (!song) {
@@ -296,8 +307,9 @@ export default class MusicController {
                     .playlist(content, {
                         requestedBy: message.member.user
                     })
-                    .catch((_) => {
+                    .catch((e) => {
                         this._logger.warn(`queue.playlist catch`)
+                        this._logger.error(e)
                         if (!guildQueue) queue.stop()
                     })
                 if (!playlist) {
@@ -455,8 +467,7 @@ export default class MusicController {
                 return
             }
             this._addedInitialTrack = true
-            guildQueue.stop()
-            guildQueue.connection.leave()
+            guildQueue.destroy()
             message.reply({
                 embeds: [
                     {
