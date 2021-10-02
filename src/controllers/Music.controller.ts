@@ -183,8 +183,9 @@ export default class MusicController {
                 },
                 {
                     name: 'Queue playlist',
-                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${MusicCommands.PLAYLIST
-                        } <playlist>`,
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${
+                        MusicCommands.PLAYLIST
+                    } <playlist>`,
                     inline: true
                 },
                 {
@@ -199,8 +200,9 @@ export default class MusicController {
                 },
                 {
                     name: 'Dequeue song',
-                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${MusicCommands.REMOVE
-                        } <position>`,
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${
+                        MusicCommands.REMOVE
+                    } <position>`,
                     inline: true
                 },
                 {
@@ -235,8 +237,9 @@ export default class MusicController {
                 },
                 {
                     name: 'Disconnect bot',
-                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${MusicCommands.DISCONNECT}/${MusicCommands.DC
-                        }`,
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${MusicCommands.DISCONNECT}/${
+                        MusicCommands.DC
+                    }`,
                     inline: true
                 },
                 {
@@ -523,8 +526,9 @@ export default class MusicController {
                 fields: [
                     {
                         name: 'Currently Playing',
-                        value: `▶ | **${guildQueue.nowPlaying}**\n 🕒 | **${guildQueue.createProgressBar().times
-                            }**\n📃 | [${guildQueue.nowPlaying.url}]\n`,
+                        value: `▶ | **${guildQueue.nowPlaying}**\n 🕒 | **${
+                            guildQueue.createProgressBar().times
+                        }**\n📃 | [${guildQueue.nowPlaying.url}]\n`,
                         inline: false
                     },
                     {
