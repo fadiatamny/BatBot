@@ -105,4 +105,11 @@ export class BotConfig implements BotConfigModel {
     public getRating(guildId?: string | null) {
         return this._getGuildConfig(guildId)?.rating ?? this._defaults.rating
     }
+
+    public getShowHidden(guildId: string | null) {
+        if (process.env.NODE_ENV !== 'development') {
+            return false
+        }
+        return this._getGuildConfig(guildId)?.showHidden ?? this._defaults.showHidden ?? true
+    }
 }
