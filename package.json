@@ -1,6 +1,6 @@
 {
     "name": "ip-watcher-bot",
-    "version": "2.3.3",
+    "version": "2.3.4",
     "description": "A discordjs bot that watches ip changes",
     "main": "./src/index.ts",
     "scripts": {
