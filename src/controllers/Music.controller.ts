@@ -4,7 +4,7 @@ import { WorkQueue } from '../utils/WorkQueue'
 import { enumKeys, removeFirstWord } from '../utils'
 import { BotError } from '../models/BotError.model'
 import BotController from './Bot.controller'
-import { Player, Playlist, Queue, Song } from 'discord-music-player'
+import { Player, Playlist, Queue, RepeatMode, Song } from 'discord-music-player'
 import { isEmpty, isNumber } from 'lodash'
 
 enum MusicCommands {
@@ -20,7 +20,8 @@ enum MusicCommands {
     REMOVE = 'remove',
     SHUFFLE = 'shuffle',
     PAUSE = 'pause',
-    RESUME = 'resume'
+    RESUME = 'resume',
+    REPEAT = 'repeat'
 }
 
 export default class MusicController {
@@ -44,7 +45,8 @@ export default class MusicController {
             [MusicCommands.REMOVE]: this._removeCommand.bind(this),
             [MusicCommands.SHUFFLE]: this._shuffleCommand.bind(this),
             [MusicCommands.PAUSE]: this._pauseCommand.bind(this),
-            [MusicCommands.RESUME]: this._resumeCommand.bind(this)
+            [MusicCommands.RESUME]: this._resumeCommand.bind(this),
+            [MusicCommands.REPEAT]: this._repeatCommand.bind(this)
         }
         this._addedInitialTrack = true
 
@@ -211,6 +213,11 @@ export default class MusicController {
                     inline: true
                 },
                 {
+                    name: 'Repeat queue',
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${MusicCommands.REPEAT}`,
+                    inline: true
+                },
+                {
                     name: 'Display queue',
                     value: `${BotController.instance.config.getPrefix(message.guildId)}q <#>`,
                     inline: true
@@ -291,7 +298,7 @@ export default class MusicController {
                             nickname: message.member.displayName
                         }
                     })
-                    .catch((e) => {
+                    .catch((e: any) => {
                         this._logger.warn(`queue.play catch`)
                         this._logger.error(e)
                         if (!guildQueue) queue.stop()
@@ -307,7 +314,7 @@ export default class MusicController {
                     .playlist(content, {
                         requestedBy: message.member.user
                     })
-                    .catch((e) => {
+                    .catch((e: any) => {
                         this._logger.warn(`queue.playlist catch`)
                         this._logger.error(e)
                         if (!guildQueue) queue.stop()
@@ -421,6 +428,27 @@ export default class MusicController {
         }
     }
 
+    private async _repeatCommand(message: Message) {
+        try {
+            const guildQueue = this._player.getQueue(message.guild!.id)
+            if (!guildQueue || !guildQueue.songs || !guildQueue.songs.length) {
+                message.reply('❌ | Queue is empty!')
+                return
+            }
+
+            if (guildQueue.repeatMode === RepeatMode.DISABLED) {
+                guildQueue.setRepeatMode(RepeatMode.QUEUE)
+                message.reply(`✅ | Queue Repeate is on.`)
+            } else {
+                guildQueue.setRepeatMode(RepeatMode.DISABLED)
+                message.reply(`✅ | Queue Repeate is off.`)
+            }
+        } catch (e: any) {
+            this._logger.warn('There was an error with repeatCommand')
+            this._logger.error(e)
+        }
+    }
+
     private async _clearCommand(message: Message) {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
@@ -512,7 +540,7 @@ export default class MusicController {
             const hours = Math.floor(queueDuration / 3600)
             const minutes = Math.floor((queueDuration - hours * 3600) / 60)
             const seconds = queueDuration - hours * 3600 - minutes * 60
-            const songs = guildQueue.songs.slice(start, end).map((song, i) => {
+            const songs = guildQueue.songs.slice(start, end).map((song: { duration: any; url: any }, i: number) => {
                 if (i === 0 && start === 0) {
                     return ''
                 }
