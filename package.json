@@ -14,7 +14,7 @@
         "lint:fix": "eslint ./src --ext .ts --quiet --fix --ignore-path ./.gitignore",
         "lint": "npm run lint:format && npm run lint:fix "
     },
-    "pre-commit": "lint",
+    "pre-commit": "",
     "keywords": [],
     "author": {
         "email": "fadiatamny@gmail.com",
