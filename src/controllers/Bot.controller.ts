@@ -13,6 +13,11 @@ enum BotServices {
     MUSIC_SHORT = 'q'
 }
 
+enum BotCommands {
+    HELP = 'help',
+    HELP_SHORT = 'h'
+}
+
 enum BotEvents {
     READY = 'ready',
     MESSAGE = 'message'
@@ -94,6 +99,50 @@ export default class BotController {
         this.watcher?.start()
     }
 
+    private async _helpCommand(message: Message) {
+        const embedded = {
+            color: 0xffff00,
+            title: 'BatBot Services',
+            description: `Prefix: '**${BotController.instance.config.getPrefix(message.guildId)}**'`,
+            fields: [
+                {
+                    name: '\u200b',
+                    value: '\u200b',
+                    inline: false
+                },
+                {
+                    name: 'Music',
+                    value: `The music service handler can be reached by:\n${BotController.instance.config.getPrefix(message.guildId)}queue (q for short)`,
+                    inline: true
+                }
+            ]
+        }
+
+        if (this.config.getShowHidden(message.guildId)) {
+            if (this.watcher) {
+                embedded.fields.push({
+                    name: 'Watcher',
+                    value: `Ip watcher and updater`,
+                    inline: true
+                })
+            }
+            if (this.rating) {
+                embedded.fields.push({
+                    name: 'Rating',
+                    value: `Rates items`,
+                    inline: true
+                })
+            }
+        }
+
+        try {
+            message.reply({ embeds: [embedded] })
+        } catch (e: any) {
+            this._logger.warn('Error in help command')
+            this._logger.error(e)
+        }
+    }
+
     private _handleCommands(message: Message) {
         const content = message.content.substring(1)
         const { first, rest } = removeFirstWord(content)
@@ -107,6 +156,10 @@ export default class BotController {
             case BotServices.MUSIC:
             case BotServices.MUSIC_SHORT:
                 this.music.handleCommands(rest, message)
+                break
+            case BotCommands.HELP:
+            case BotCommands.HELP_SHORT:
+                this._helpCommand(message)
                 break
             default:
                 // return message of service not available.

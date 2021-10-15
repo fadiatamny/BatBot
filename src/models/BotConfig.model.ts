@@ -30,6 +30,7 @@ export interface UserConfig {
     music: MusicConfig
     ipwatcher?: WatcherConfig[]
     rating?: RatingConfig
+    showHidden?: boolean
 }
 
 export interface BotConfig {
