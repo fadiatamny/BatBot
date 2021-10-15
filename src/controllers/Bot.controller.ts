@@ -200,7 +200,7 @@ export default class BotController {
                 activities: [
                     {
                         name: presenceMessage,
-                        type: 'WATCHING'
+                        type: presenceMessage ? 'STREAMING' : 'WATCHING'
                     },
                     ...activities
                 ]
