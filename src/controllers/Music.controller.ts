@@ -60,10 +60,10 @@ export default class MusicController {
         this._logger = new Logger('MusicController')
 
         this._player
-            .on('playlistAdd', (queue: Queue, playlist: Playlist) => {
+            .on('playlistAdd', async (queue: Queue, playlist: Playlist) => {
                 try {
                     const position = queue.songs.indexOf(playlist.songs[0]) + 1
-                    queue.data.message.reply({
+                    await queue.data.message.reply({
                         embeds: [
                             {
                                 color: '#00ff00',
@@ -92,33 +92,54 @@ export default class MusicController {
                     this._logger.error(e)
                 }
             })
-            .on('songAdd', (queue: Queue, song: Song) => {
+            .on('songAdd', async (queue: Queue, song: Song) => {
                 if (this._addedInitialTrack) {
                     this._addedInitialTrack = false
                     return // means its initial track and we dont need to notify we added it to a queue.
                 }
 
                 const embedded = this._songEmbedded(queue, song, 'Added to queue', true)
-                song.data.message.reply({ embeds: [embedded] })
+                try {
+                    await song.data.message.reply({ embeds: [embedded] })
+                } catch (e) {
+                    this._logger.warn('There was an error with songAdd')
+                    this._logger.error(e)
+                }
             })
-            .on('songFirst', (queue: Queue, song: Song) => {
+            .on('songFirst', async (queue: Queue, song: Song) => {
+                this._addedInitialTrack = false
                 const embedded = this._songEmbedded(queue, song, 'Started Playing').setColor('#0099ff')
 
-                this._addedInitialTrack = false
-                queue.data.message.channel.send({ embeds: [embedded] })
+                try {
+                    await queue.data.message.channel.send({ embeds: [embedded] })
+                } catch (e) {
+                    this._logger.warn('There was an error with songFirst')
+                    this._logger.error(e)
+                }
             })
-            .on('songChanged', (queue: Queue, newSong: Song) => {
+            .on('songChanged', async (queue: Queue, newSong: Song) => {
                 const embedded = this._songEmbedded(queue, newSong, 'Now Playing').setColor('#0099ff')
 
-                queue.data.message.channel.send({ embeds: [embedded] })
+                try {
+                    await queue.data.message.channel.send({ embeds: [embedded] })
+                } catch (e) {
+                    this._logger.warn('There was an error with songChanged')
+                    this._logger.error(e)
+                }
             })
             .on('queueEnd', async (queue: Queue) => {
+                this._addedInitialTrack = true
                 const embedded = new MessageEmbed()
                     .setColor('#ff0000')
                     .setTitle('Queue is over')
                     .setDescription('The queue has ended.')
-                this._addedInitialTrack = true
-                await queue.data.message.channel.send({ embeds: [embedded] })
+
+                try {
+                    await queue.data.message.channel.send({ embeds: [embedded] })
+                } catch (e) {
+                    this._logger.warn('There was an error with queueEnd')
+                    this._logger.error(e)
+                }
             })
             .on('channelEmpty', (queue: Queue) => {
                 this._logger.log('channel is empty - guild: ' + queue.guild.name)
@@ -256,7 +277,12 @@ export default class MusicController {
                 }
             ]
         }
-        message.reply({ embeds: [embedded] })
+        try {
+            await message.reply({ embeds: [embedded] })
+        } catch (e) {
+            this._logger.warn('There was an error with helpCommand')
+            this._logger.error(e)
+        }
     }
 
     private async _playlistCommand(message: Message, content: string) {
@@ -266,7 +292,7 @@ export default class MusicController {
     private async _playCommand(message: Message, content: string, isPlaylist = false) {
         try {
             if (!message.member?.voice.channel) {
-                message.reply('You need to be in a voice channel to queue music!')
+                await message.reply('You need to be in a voice channel to queue music!')
                 return
             }
             if (
@@ -274,7 +300,7 @@ export default class MusicController {
                 message.guild!.me.voice.channel &&
                 message.member!.voice.channel !== message.guild!.me.voice.channel
             ) {
-                message.reply(`I'm already occupied in another voice channel!`)
+                await message.reply(`I'm already occupied in another voice channel!`)
                 return
             }
 
@@ -304,7 +330,7 @@ export default class MusicController {
                         if (!guildQueue) queue.stop()
                     })
                 if (!song) {
-                    message.reply(
+                    await message.reply(
                         `❌ | your song couldn't be found, if it's a playlist try '**${MusicCommands.PLAYLIST}**' instead of '**${MusicCommands.PLAY}**'`
                     )
                     return
@@ -320,7 +346,7 @@ export default class MusicController {
                         if (!guildQueue) queue.stop()
                     })
                 if (!playlist) {
-                    message.reply(
+                    await message.reply(
                         `❌ | your playlist couldn't be found, if it's a song try '**${MusicCommands.PLAY}**' instead of '**${MusicCommands.PLAYLIST}**'`
                     )
                 }
@@ -335,7 +361,7 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.isPlaying) {
-                message.reply('❌ | No music is being played!')
+                await message.reply('❌ | No music is being played!')
                 return
             }
             const embedded = this._songEmbedded(
@@ -345,7 +371,7 @@ export default class MusicController {
                 false,
                 true
             ).setColor('#0099ff')
-            message.reply({ embeds: [embedded] })
+            await message.reply({ embeds: [embedded] })
         } catch (e: any) {
             this._logger.warn('There was an error with playCommand')
             this._logger.error(e)
@@ -356,11 +382,11 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.isPlaying) {
-                message.reply('❌ | No music is being played!')
+                await message.reply('❌ | No music is being played!')
                 return
             }
             const song = guildQueue?.skip()
-            message.reply(song ? `✅ | Skipped **${song}**!` : '❌ | Something went wrong!')
+            await message.reply(song ? `✅ | Skipped **${song}**!` : '❌ | Something went wrong!')
         } catch (e: any) {
             this._logger.warn('There was an error with skipCommand')
             this._logger.error(e)
@@ -371,11 +397,11 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.isPlaying) {
-                message.reply('❌ | No music is being played!')
+                await message.reply('❌ | No music is being played!')
                 return
             }
             guildQueue.setPaused(true)
-            message.reply({
+            await message.reply({
                 embeds: [
                     {
                         color: '#FFA500',
@@ -394,11 +420,11 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.isPlaying) {
-                message.reply('❌ | No music is being played!')
+                await message.reply('❌ | No music is being played!')
                 return
             }
             guildQueue.setPaused(false)
-            message.reply({
+            await message.reply({
                 embeds: [
                     {
                         color: '#0099ff',
@@ -417,11 +443,11 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.songs || !guildQueue.songs.length) {
-                message.reply('❌ | Queue is empty!')
+                await message.reply('❌ | Queue is empty!')
                 return
             }
             guildQueue.shuffle()
-            message.reply(`✅ | Queue has been shuffled.`)
+            await message.reply(`✅ | Queue has been shuffled.`)
         } catch (e: any) {
             this._logger.warn('There was an error with shuffleCommand')
             this._logger.error(e)
@@ -432,16 +458,16 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.songs || !guildQueue.songs.length) {
-                message.reply('❌ | Queue is empty!')
+                await message.reply('❌ | Queue is empty!')
                 return
             }
 
             if (guildQueue.repeatMode === RepeatMode.DISABLED) {
                 guildQueue.setRepeatMode(RepeatMode.QUEUE)
-                message.reply(`✅ | Queue Repeate is on.`)
+                await message.reply(`✅ | Queue Repeate is on.`)
             } else {
                 guildQueue.setRepeatMode(RepeatMode.DISABLED)
-                message.reply(`✅ | Queue Repeate is off.`)
+                await message.reply(`✅ | Queue Repeate is off.`)
             }
         } catch (e: any) {
             this._logger.warn('There was an error with repeatCommand')
@@ -453,7 +479,7 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.songs || !guildQueue.songs.length) {
-                message.reply('❌ | Queue is empty!')
+                await message.reply('❌ | Queue is empty!')
                 return
             }
             guildQueue.clearQueue()
@@ -467,12 +493,12 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || (!guildQueue.isPlaying && (!guildQueue.songs || !guildQueue.songs.length))) {
-                message.reply('❌ | No music to stop and no queue to clear!')
+                await message.reply('❌ | No music to stop and no queue to clear!')
                 return
             }
             this._addedInitialTrack = true
             guildQueue.stop()
-            message.reply({
+            await message.reply({
                 embeds: [
                     {
                         color: '#ff0000',
@@ -491,12 +517,12 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.connection) {
-                message.reply(`❌ | I'm not connected to a voice channel!`)
+                await message.reply(`❌ | I'm not connected to a voice channel!`)
                 return
             }
             this._addedInitialTrack = true
             guildQueue.destroy()
-            message.reply({
+            await message.reply({
                 embeds: [
                     {
                         color: '#ff0000',
@@ -515,7 +541,7 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.songs || !guildQueue.songs.length) {
-                message.reply('❌ | Queue is empty!')
+                await message.reply('❌ | Queue is empty!')
                 return
             }
             let index = 1
@@ -527,7 +553,7 @@ export default class MusicController {
             }
             const queueLength = guildQueue.songs.length
             if (10 * (index - 1) >= queueLength || 10 * (index - 1) < 0) {
-                message.reply('❌ | page index invalid! displaying 1st page..')
+                await message.reply('❌ | page index invalid! displaying 1st page..')
                 index = 1
             }
             const start = 10 * (index - 1)
@@ -584,7 +610,7 @@ export default class MusicController {
                 ]
             }
 
-            message.reply({ embeds: [embedded] })
+            await message.reply({ embeds: [embedded] })
         } catch (e: any) {
             this._logger.warn('There was an error with queue')
             this._logger.error(e)
@@ -595,12 +621,12 @@ export default class MusicController {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.songs || !guildQueue.songs.length) {
-                message.reply('❌ | Queue is empty!')
+                await message.reply('❌ | Queue is empty!')
                 return
             }
             const index = parseInt(content) - 1
             if (index >= guildQueue.songs.length || index < 0) {
-                message.reply(
+                await message.reply(
                     `❌ | invalid position! try '${BotController.instance.config.getPrefix(
                         message.guildId
                     )}q' to display playlist.`
@@ -608,7 +634,7 @@ export default class MusicController {
                 return
             }
             const song = guildQueue.remove(index)
-            message.reply(`✅ | Removed **${song}**`)
+            await message.reply(`✅ | Removed **${song}**`)
         } catch (e: any) {
             this._logger.warn('There was an error with removeCommand')
             this._logger.error(e)
@@ -629,7 +655,7 @@ export default class MusicController {
         return true
     }
 
-    public handleCommands(content: string, message: Message) {
+    public async handleCommands(content: string, message: Message) {
         try {
             if (!this._validCommand(message)) {
                 throw new BotError('invalid command occured: missing key properties', {
@@ -657,16 +683,19 @@ export default class MusicController {
             if (!first || isEmpty(first) || isNumber(first)) {
                 this._queueCommand(message, first)
             } else {
-                message.reply(
+                await message.reply(
                     `This command is not supported - try '${BotController.instance.config.getPrefix(
                         message.guildId
                     )}queue help'`
                 )
             }
         } catch (e: any) {
-            message.reply('Something has gone terribly wrong! 😵‍💫')
             this._logger.warn('There was an error with handleCommands')
             this._logger.error(e)
+
+            try {
+                await message.reply('Something has gone terribly wrong! 😵‍💫')
+            } catch {}
         }
     }
 }

@@ -95,7 +95,7 @@ export default class BotController {
     }
 
     private _ready() {
-        console.log('The bot is connected !')
+        this._logger.log('The bot is connected !')
         this.watcher?.start()
     }
 
@@ -136,7 +136,7 @@ export default class BotController {
         }
 
         try {
-            message.reply({ embeds: [embedded] })
+            await message.reply({ embeds: [embedded] })
         } catch (e: any) {
             this._logger.warn('Error in help command')
             this._logger.error(e)

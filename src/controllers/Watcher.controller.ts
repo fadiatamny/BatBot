@@ -31,25 +31,40 @@ export default class WatcherController {
         this._logger = new Logger('WatcherController')
     }
 
-    private _refreshCommand(message: Message) {
-        this._service.refresh()
-        message.reply(`I've refreshed the watcher!`)
-    }
-
-    private _ipCommand(message: Message) {
-        if (this.ip === '') {
-            message.reply('The ip is not set yet.')
-        } else {
-            message.reply(`The ip is: ${this.ip}`)
+    private async _refreshCommand(message: Message) {
+        try {
+            this._service.refresh()
+            await message.reply(`I've refreshed the watcher!`)
+        } catch (e) {
+            this._logger.warn(`Error occured in refreshCommand`)
+            this._logger.error(e)
         }
     }
 
-    private _setIPCommand(message: Message) {
-        if (this.ip === '') {
-            message.reply('The ip is not set yet.')
-        } else {
-            this.setPresenceMessage(this.ip)
-            message.reply(`IP set to: ${this.ip}`)
+    private async _ipCommand(message: Message) {
+        try {
+            if (this.ip === '') {
+                await message.reply('The ip is not set yet.')
+            } else {
+                await message.reply(`The ip is: ${this.ip}`)
+            }
+        } catch (e) {
+            this._logger.warn(`Error occured in ip`)
+            this._logger.error(e)
+        }
+    }
+
+    private async _setIPCommand(message: Message) {
+        try {
+            if (this.ip === '') {
+                await message.reply('The ip is not set yet.')
+            } else {
+                this.setPresenceMessage(this.ip)
+                await message.reply(`IP set to: ${this.ip}`)
+            }
+        } catch (e) {
+            this._logger.warn(`Error occured in setIP`)
+            this._logger.error(e)
         }
     }
 
@@ -74,18 +89,23 @@ export default class WatcherController {
     }
 
     public async handleCommands(content: string, message: Message) {
-        const isInCorrectChannel = await this._isInCorrectChannel()
-        if (!isInCorrectChannel) {
-            return
-        }
-        const { first } = removeFirstWord(content)
-
-        for (const command of enumKeys(WatcherCommands)) {
-            const key = WatcherCommands[command]
-            if (key === first) {
-                this._commands[key](message)
+        try {
+            const isInCorrectChannel = await this._isInCorrectChannel()
+            if (!isInCorrectChannel) {
                 return
             }
+            const { first } = removeFirstWord(content)
+
+            for (const command of enumKeys(WatcherCommands)) {
+                const key = WatcherCommands[command]
+                if (key === first) {
+                    await this._commands[key](message)
+                    return
+                }
+            }
+        } catch (e) {
+            this._logger.warn(`Error occured in handleCommands`)
+            this._logger.error(e)
         }
     }
 
@@ -112,6 +132,7 @@ export default class WatcherController {
                 }
             } catch (e) {
                 this._logger.warn(`Bot does not have access to the guild - ${config.serverId}`)
+                this._logger.error(e)
             }
         }
         this._ip = ip
