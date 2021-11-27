@@ -28,6 +28,7 @@ module.exports = {
         '@typescript-eslint/ban-types': 'off',
         '@typescript-eslint/no-non-null-assertion': 'off',
         '@typescript-eslint/no-explicit-any': 'off',
-        '@typescript-eslint/ban-ts-comment': 'warn'
+        '@typescript-eslint/ban-ts-comment': 'warn',
+        '@typescript-eslint/no-this-alias': 'off'
     }
 }

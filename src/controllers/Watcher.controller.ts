@@ -5,6 +5,7 @@ import BotController from './Bot.controller'
 import { Logger } from '../utils/Logger'
 
 enum WatcherCommands {
+    HELP = 'help',
     REFRESH = 'refresh',
     IP = 'ip',
     SET_IP = 'set ip'
@@ -25,10 +26,51 @@ export default class WatcherController {
         this._commands = {
             [WatcherCommands.IP]: this._ipCommand.bind(this),
             [WatcherCommands.REFRESH]: this._refreshCommand.bind(this),
-            [WatcherCommands.SET_IP]: this._setIPCommand.bind(this)
+            [WatcherCommands.SET_IP]: this._setIPCommand.bind(this),
+            [WatcherCommands.HELP]: this._helpCommand.bind(this)
         }
         this._service = new WatcherService()
         this._logger = new Logger('WatcherController')
+    }
+    private async _helpCommand(message: Message) {
+        const embedded = {
+            color: 0xffff00,
+            title: 'Watcher Services',
+            description: `Prefix: '**${BotController.instance.config.getPrefix(message.guildId)}**'watcher`,
+            fields: [
+                {
+                    name: '\u200b',
+                    value: '\u200b',
+                    inline: false
+                },
+                {
+                    name: 'IP',
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}watcher ${WatcherCommands.IP}`,
+                    inline: true
+                },
+                {
+                    name: 'Refresh the Watcher',
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}watcher ${
+                        WatcherCommands.REFRESH
+                    }`,
+                    inline: true
+                },
+                {
+                    name: 'Force Ip set',
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}watcher ${
+                        WatcherCommands.SET_IP
+                    }`,
+                    inline: true
+                }
+            ]
+        }
+
+        try {
+            await message.reply({ embeds: [embedded] })
+        } catch (e: any) {
+            this._logger.warn('Error in help command')
+            this._logger.error(e)
+        }
     }
 
     private async _refreshCommand(message: Message) {
@@ -77,11 +119,14 @@ export default class WatcherController {
         for (const c of available) {
             const guild = await this._bot.guilds.fetch(c.serverId)
             if (guild) {
-                guild.channels.cache.map((channel) => {
+                let itter: IteratorResult<[string, ThreadChannel | GuildChannel], any>
+                do {
+                    itter = guild.channels.cache.entries().next()
+                    const channel = itter.value
                     if (channel.name === c.channelName || c.channelName === '*') {
                         return true
                     }
-                })
+                } while (!itter.done)
             }
         }
 
