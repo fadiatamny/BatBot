@@ -1,4 +1,4 @@
-import http from 'http'
+import https from 'https'
 import BotController from '../controllers/Bot.controller'
 import { HourInMS } from '../utils'
 import { Logger } from '../utils/Logger'
@@ -12,32 +12,31 @@ export default class WatcherService {
     }
 
     private _poll() {
+        const self = this
         try {
             return new Promise<string>((resolve, reject) => {
                 this._logger.log('started Polling')
-                const options = {
-                    host: 'ipv4bot.whatismyipaddress.com',
-                    port: 80,
-                    path: '/'
-                }
-                try {
-                    http.get(options, function (res) {
-                        res.on('data', function (chunk) {
-                            const ip = chunk.toString()
-                            BotController.instance?.watcher?.setPresenceMessage(ip)
-                            resolve(ip)
-                        })
-                    }).on('error', function (e) {
+                const url = 'https://api.ipify.org?format=json'
+                https.get(url, function (res) {
+                    let body = ''
+                    res.on('data', (chunk) => (body += chunk.toString()))
+                    res.on('error', function (e) {
                         reject(e.message)
                     })
-                } catch (e: any) {
-                    reject(e.message)
-                } finally {
-                    this._logger.log('finished Polling')
-                }
+                    res.on('end', () => {
+                        if (res.statusCode ?? (500 >= 200 && res.statusCode) ?? 500 <= 299) {
+                            const response = JSON.parse(body.toString())
+                            BotController.instance?.watcher?.setPresenceMessage(response.ip)
+                            self._logger.log('finished Polling')
+                            resolve(response.ip)
+                        } else {
+                            reject('Request failed. status: ' + res.statusCode + ', body: ' + body)
+                        }
+                    })
+                })
             })
         } catch (e) {
-            this._logger.warn('Error occured in watcher service')
+            this._logger.warn('Error occured in watcher service while polling')
             this._logger.error(e)
             return ''
         }

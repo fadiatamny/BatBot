@@ -2,7 +2,6 @@ import { LogLevels, BotConfig as BotConfigModel, UserConfig } from '../models/Bo
 import { FileLoader } from './FileLoader.service'
 import { cloneDeep } from 'lodash'
 import { Dictionary } from '../models/Dictionary.model'
-import { HourInMS } from '../utils'
 import { Logger } from '../utils/Logger'
 
 export class BotConfig implements BotConfigModel {
@@ -20,7 +19,7 @@ export class BotConfig implements BotConfigModel {
     private _logLevel: LogLevels
     private _defaults: UserConfig
     private _servers?: { [key: string]: Partial<UserConfig> }
-    private _interval: NodeJS.Timer | null
+    // private _interval: NodeJS.Timer | null
 
     constructor() {
         this._logger = new Logger('BotConfigService')
@@ -48,8 +47,6 @@ export class BotConfig implements BotConfigModel {
                 }
             }
         }
-
-        this._interval = setInterval(this._dumpConfigToFile.bind(this), HourInMS)
     }
 
     private _toJson(): Dictionary {
@@ -67,13 +64,7 @@ export class BotConfig implements BotConfigModel {
     }
 
     public saveConfig() {
-        if (this._interval) {
-            clearInterval(this._interval)
-            this._interval = null
-        }
-
         this._dumpConfigToFile()
-        this._interval = setInterval(this._dumpConfigToFile.bind(this), HourInMS)
     }
 
     public get logLevel() {
@@ -106,6 +97,11 @@ export class BotConfig implements BotConfigModel {
         return this._getGuildConfig(guildId)?.rating ?? this._defaults.rating
     }
 
+    /**
+     * Function to allow shoing of hidden features per guild
+     * @param guildId
+     * @returns
+     */
     public getShowHidden(guildId: string | null) {
         if (process.env.NODE_ENV !== 'development') {
             return false
