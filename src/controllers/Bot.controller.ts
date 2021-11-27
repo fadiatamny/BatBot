@@ -20,7 +20,7 @@ enum BotCommands {
 
 enum BotEvents {
     READY = 'ready',
-    MESSAGE = 'message'
+    MESSAGE = 'messageCreate'
 }
 
 export default class BotController {
