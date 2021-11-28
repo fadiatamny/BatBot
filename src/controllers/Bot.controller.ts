@@ -1,4 +1,4 @@
-import { Client, Message, Intents, ActivitiesOptions, Guild, PresenceData } from 'discord.js'
+import { Client, Message, Intents, ActivitiesOptions, PresenceData } from 'discord.js'
 import { BotConfig } from '../services/BotConfig.service'
 import RatingController from './Rating.controller'
 import WatcherController from './Watcher.controller'
@@ -143,7 +143,7 @@ export default class BotController {
         }
     }
 
-    private _handleCommands(message: Message) {
+    private async _handleCommands(message: Message) {
         const content = message.content.substring(1)
         const { first, rest } = removeFirstWord(content)
         switch (first?.toLowerCase()) {
@@ -162,14 +162,14 @@ export default class BotController {
                 this._helpCommand(message)
                 break
             default:
-                // return message of service not available.
+                await message.reply('this option doesnt exist please check out the help command')
                 break
         }
     }
 
-    private _message(message: Message) {
+    private async _message(message: Message) {
         if (message.content.startsWith(this.config.getPrefix(message.guildId))) {
-            this._handleCommands(message)
+            await this._handleCommands(message)
             return
         }
     }

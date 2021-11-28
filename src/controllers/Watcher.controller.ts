@@ -110,27 +110,34 @@ export default class WatcherController {
         }
     }
 
-    private async _isInCorrectChannel() {
+    private _isInCorrectChannel() {
         const available = BotController.instance.config.getIPWatcher()
         if (!available) {
-            return
+            return false
         }
 
-        for (const c of available) {
-            const guild = await this._bot.guilds.fetch(c.serverId)
-            if (guild) {
-                let itter: IteratorResult<[string, ThreadChannel | GuildChannel], any>
-                do {
-                    itter = guild.channels.cache.entries().next()
-                    const channel = itter.value
-                    if (channel.name === c.channelName || c.channelName === '*') {
-                        return true
+        return new Promise<boolean>(async (resolve, reject) => {
+            for (const config of available) {
+                try {
+                    const guild = await this._bot.guilds.fetch(config.serverId)
+                    if (guild) {
+                        guild.channels.cache.map((channel: GuildChannel | ThreadChannel) => {
+                            if (!channel.isText()) {
+                                return
+                            }
+                            if (channel.name === config.channelName || config.channelName === '*') {
+                                resolve(true)
+                            }
+                        })
                     }
-                } while (!itter.done)
+                } catch (e) {
+                    this._logger.warn(`Bot does not have access to the guild - ${config.serverId}`)
+                    this._logger.error(e)
+                }
             }
-        }
 
-        return false
+            resolve(false)
+        })
     }
 
     public async handleCommands(content: string, message: Message) {
