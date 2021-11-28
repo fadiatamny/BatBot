@@ -1,4 +1,4 @@
-import { Client, Message, Intents, ActivitiesOptions, Guild, PresenceData } from 'discord.js'
+import { Client, Message, Intents, ActivitiesOptions, PresenceData } from 'discord.js'
 import { BotConfig } from '../services/BotConfig.service'
 import RatingController from './Rating.controller'
 import WatcherController from './Watcher.controller'
