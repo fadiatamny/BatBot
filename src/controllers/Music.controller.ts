@@ -1,7 +1,7 @@
-import { Client, Message, MessageEmbed, Role } from 'discord.js'
+import { Client, Message, MessageEmbed, MessageEmbedOptions, Role } from 'discord.js'
 import { Logger } from '../utils/Logger'
 import { WorkQueue } from '../utils/WorkQueue'
-import { enumKeys, removeFirstWord } from '../utils'
+import { delay, enumKeys, removeFirstWord } from '../utils'
 import { BotError } from '../models/BotError.model'
 import BotController from './Bot.controller'
 import { Player, Playlist, Queue, RepeatMode, Song } from 'discord-music-player'
@@ -11,6 +11,7 @@ enum MusicCommands {
     HELP = 'help',
     PLAY = 'add',
     PLAYLIST = 'playlist',
+    MULTI = 'multi',
     PLAYING = 'playing',
     SKIP = 'skip',
     STOP = 'stop',
@@ -36,6 +37,7 @@ export default class MusicController {
             [MusicCommands.HELP]: this._helpCommand.bind(this),
             [MusicCommands.PLAY]: this._playCommand.bind(this),
             [MusicCommands.PLAYLIST]: this._playlistCommand.bind(this),
+            [MusicCommands.MULTI]: this._multiTrackCommand.bind(this),
             [MusicCommands.PLAYING]: this._playingCommand.bind(this),
             [MusicCommands.SKIP]: this._skipCommand.bind(this),
             [MusicCommands.STOP]: this._stopCommand.bind(this),
@@ -100,7 +102,7 @@ export default class MusicController {
 
                 const embedded = this._songEmbedded(queue, song, 'Added to queue', true)
                 try {
-                    await song.data.message.reply({ embeds: [embedded] })
+                    await song.data?.message?.reply({ embeds: [embedded] })
                 } catch (e) {
                     this._logger.warn('There was an error with songAdd')
                     this._logger.error(e)
@@ -111,7 +113,7 @@ export default class MusicController {
                 const embedded = this._songEmbedded(queue, song, 'Started Playing').setColor('#0099ff')
 
                 try {
-                    await queue.data.message.channel.send({ embeds: [embedded] })
+                    await queue.data?.message?.channel.send({ embeds: [embedded] })
                 } catch (e) {
                     this._logger.warn('There was an error with songFirst')
                     this._logger.error(e)
@@ -121,7 +123,7 @@ export default class MusicController {
                 const embedded = this._songEmbedded(queue, newSong, 'Now Playing').setColor('#0099ff')
 
                 try {
-                    await queue.data.message.channel.send({ embeds: [embedded] })
+                    await queue.data?.message?.channel.send({ embeds: [embedded] })
                 } catch (e) {
                     this._logger.warn('There was an error with songChanged')
                     this._logger.error(e)
@@ -135,7 +137,7 @@ export default class MusicController {
                     .setDescription('The queue has ended.')
 
                 try {
-                    await queue.data.message.channel.send({ embeds: [embedded] })
+                    await queue.data?.message?.channel.send({ embeds: [embedded] })
                 } catch (e) {
                     this._logger.warn('There was an error with queueEnd')
                     this._logger.error(e)
@@ -212,6 +214,13 @@ export default class MusicController {
                     inline: true
                 },
                 {
+                    name: 'Queue multi tracks',
+                    value: `${BotController.instance.config.getPrefix(message.guildId)}q ${
+                        MusicCommands.MULTI
+                    } <Track links or names seperated by a new line>`,
+                    inline: true
+                },
+                {
                     name: 'Display current song',
                     value: `${BotController.instance.config.getPrefix(message.guildId)}q ${MusicCommands.PLAYING}`,
                     inline: true
@@ -285,44 +294,58 @@ export default class MusicController {
         }
     }
 
-    private async _playlistCommand(message: Message, content: string) {
-        this._playCommand(message, content, true)
+    private async _isInChannel(message: Message) {
+        if (!message.member?.voice.channel) {
+            await message.reply('You need to be in a voice channel to queue music!')
+            return false
+        }
+        if (
+            message.guild!.me &&
+            message.guild!.me.voice.channel &&
+            message.member!.voice.channel !== message.guild!.me.voice.channel
+        ) {
+            await message.reply(`I'm already occupied in another voice channel!`)
+            return false
+        }
+
+        return true
     }
 
-    private async _playCommand(message: Message, content: string, isPlaylist = false) {
+    private async _initQueue(message: Message) {
+        const guildQueue = this._player.getQueue(message.guild!.id)
+
+        const queue = this._player.createQueue(message.guild!.id, {
+            data: {
+                message: message
+            }
+        })
+
+        await queue.join(message.member!.voice.channel!)
+
+        return { guildQueue, queue }
+    }
+
+    private async _multiTrackCommand(message: Message, content: string) {
         try {
-            if (!message.member?.voice.channel) {
-                await message.reply('You need to be in a voice channel to queue music!')
-                return
-            }
-            if (
-                message.guild!.me &&
-                message.guild!.me.voice.channel &&
-                message.member!.voice.channel !== message.guild!.me.voice.channel
-            ) {
-                await message.reply(`I'm already occupied in another voice channel!`)
+            const inChannel = await this._isInChannel(message)
+            if (!inChannel) {
                 return
             }
 
-            const guildQueue = this._player.getQueue(message.guild!.id)
+            const { guildQueue, queue } = await this._initQueue(message)
 
-            const queue = this._player.createQueue(message.guild!.id, {
-                data: {
-                    message: message
-                }
-            })
+            const embed: MessageEmbedOptions = {
+                color: '#ff6e00',
+                title: 'The following songs have been added:',
+                fields: []
+            }
 
-            await queue.join(message.member!.voice.channel!)
-
-            await message.reply('🎵 Searching 🔎 `' + content + '`')
-            if (!isPlaylist) {
+            const errored: string[] = []
+            const list: string[] = content.split('\n').filter((val) => val !== '')
+            for (let i = 0; i < list.length; ++i) {
                 const song = await queue
-                    .play(content, {
-                        requestedBy: message.member.user,
-                        data: {
-                            message: message,
-                            nickname: message.member.displayName
-                        }
+                    .play(list[i], {
+                        requestedBy: message.member?.user
                     })
                     .catch((e: any) => {
                         this._logger.warn(`queue.play catch`)
@@ -330,26 +353,94 @@ export default class MusicController {
                         if (!guildQueue) queue.stop()
                     })
                 if (!song) {
-                    await message.reply(
-                        `❌ | your song couldn't be found, if it's a playlist try '**${MusicCommands.PLAYLIST}**' instead of '**${MusicCommands.PLAY}**'`
-                    )
-                    return
-                }
-            } else {
-                const playlist = await queue
-                    .playlist(content, {
-                        requestedBy: message.member.user
+                    errored.push(list[i])
+                } else {
+                    embed.fields?.push({
+                        name: song.name,
+                        value: song.url,
+                        inline: false
                     })
-                    .catch((e: any) => {
-                        this._logger.warn(`queue.playlist catch`)
-                        this._logger.error(e)
-                        if (!guildQueue) queue.stop()
-                    })
-                if (!playlist) {
-                    await message.reply(
-                        `❌ | your playlist couldn't be found, if it's a song try '**${MusicCommands.PLAY}**' instead of '**${MusicCommands.PLAYLIST}**'`
-                    )
                 }
+            }
+
+            if (errored.length) {
+                embed.fields?.push({
+                    name: '------------------------------',
+                    value: '------------------------------',
+                    inline: false
+                })
+                embed.fields?.push({
+                    name: 'Following Songs Failed:',
+                    value: errored.join('\n'),
+                    inline: false
+                })
+            }
+
+            await message.reply({ embeds: [embed] })
+        } catch (e: any) {
+            this._logger.warn('There was an error with multiTrackCommand')
+            this._logger.error(e)
+        }
+    }
+
+    private async _playlistCommand(message: Message, content: string) {
+        try {
+            const inChannel = await this._isInChannel(message)
+            if (!inChannel) {
+                return
+            }
+
+            const { guildQueue, queue } = await this._initQueue(message)
+            await message.reply('🎵 Searching 🔎 `' + content + '`')
+            const playlist = await queue
+                .playlist(content, {
+                    requestedBy: message.member?.user
+                })
+                .catch((e: any) => {
+                    this._logger.warn(`queue.playlist catch`)
+                    this._logger.error(e)
+                    if (!guildQueue) queue.stop()
+                })
+
+            if (!playlist) {
+                await message.reply(
+                    `❌ | your playlist couldn't be found, if it's a song try '**${MusicCommands.PLAY}**' instead of '**${MusicCommands.PLAYLIST}**'`
+                )
+            }
+        } catch (e: any) {
+            this._logger.warn('There was an error with playlistCommand')
+            this._logger.error(e)
+        }
+    }
+
+    private async _playCommand(message: Message, content: string) {
+        try {
+            const inChannel = await this._isInChannel(message)
+            if (!inChannel) {
+                return
+            }
+
+            const { guildQueue, queue } = await this._initQueue(message)
+
+            await message.reply('🎵 Searching 🔎 `' + content + '`')
+            const song = await queue
+                .play(content, {
+                    requestedBy: message.member?.user,
+                    data: {
+                        message: message,
+                        nickname: message.member?.displayName
+                    }
+                })
+                .catch((e: any) => {
+                    this._logger.warn(`queue.play catch`)
+                    this._logger.error(e)
+                    if (!guildQueue) queue.stop()
+                })
+            if (!song) {
+                await message.reply(
+                    `❌ | your song couldn't be found, if it's a playlist try '**${MusicCommands.PLAYLIST}**' instead of '**${MusicCommands.PLAY}**'`
+                )
+                return
             }
         } catch (e: any) {
             this._logger.warn('There was an error with playCommand')
@@ -483,6 +574,7 @@ export default class MusicController {
                 return
             }
             guildQueue.clearQueue()
+            await message.reply(`✅ | Queue was cleared.`)
         } catch (e: any) {
             this._logger.warn('There was an error with clearCommand')
             this._logger.error(e)
@@ -537,7 +629,7 @@ export default class MusicController {
         }
     }
 
-    private async _queueCommand(message: Message, content: string | undefined) {
+    private async _queueCommand(message: Message, content?: string) {
         try {
             const guildQueue = this._player.getQueue(message.guild!.id)
             if (!guildQueue || !guildQueue.songs || !guildQueue.songs.length) {
