@@ -574,6 +574,7 @@ export default class MusicController {
                 return
             }
             guildQueue.clearQueue()
+            await message.reply(`✅ | Queue was cleared.`)
         } catch (e: any) {
             this._logger.warn('There was an error with clearCommand')
             this._logger.error(e)
