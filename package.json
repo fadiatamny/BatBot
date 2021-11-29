@@ -1,6 +1,6 @@
 {
     "name": "ip-watcher-bot",
-    "version": "2.3.10-dev.0",
+    "version": "2.3.10",
     "description": "A discordjs bot that watches ip changes",
     "main": "./src/index.ts",
     "scripts": {
@@ -31,14 +31,14 @@
         "url": "https://github.com/fadiatamny/BatBot.git"
     },
     "dependencies": {
-        "@discordjs/opus": "^0.6.0",
-        "discord-music-player": "^8.1.0",
+        "@discordjs/opus": "0.6.0",
+        "discord-music-player": "8.1.0",
         "discord.js": "13.0.1",
-        "dotenv": "^10.0.0",
-        "ffmpeg": "^0.0.4",
-        "ffmpeg-static": "^4.4.0",
-        "lodash": "^4.17.21",
-        "sqlite3": "^5.0.2"
+        "dotenv": "10.0.0",
+        "ffmpeg": "0.0.4",
+        "ffmpeg-static": "^.4.0",
+        "lodash": "4.17.21",
+        "sqlite3": "5.0.2"
     },
     "devDependencies": {
         "@types/lodash": "^4.14.173",
