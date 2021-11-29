@@ -3,9 +3,14 @@ export const enumKeys = <E>(e: E): (keyof E)[] => {
 }
 
 export const removeFirstWord = (content: string) => {
-    const split = content.split(' ')
+    const split = content.split(/\s+/)
     const first = split.shift()
-    const rest = split.join(' ')
+    let rest: string
+    if (first) {
+        rest = content.replace(first, '').trim()
+    } else {
+        rest = split.join(' ')
+    }
 
     return { first, rest }
 }
